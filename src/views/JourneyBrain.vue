@@ -1,16 +1,19 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Brain, MapPin, Clock, Cloud, Car, Heart, Building2, TrendingUp, Route, Zap, Flag, Check, ArrowDownRight } from 'lucide-vue-next'
+import { Brain, MapPin, Clock, Cloud, Car, Heart, Building2, TrendingUp, Route, Zap, Flag, Check, ArrowDownRight, AlertCircle, RefreshCw } from 'lucide-vue-next'
 import { reasoningSteps } from '@/mock/data'
-import { analyzeRoute, generateMusic, cache, type RouteStep } from '@/api'
+import { analyzeRoute, generateMusic, cache, type RouteStep, type RouteAnalysis, type MusicGeneration, type APIResult } from '@/api'
+import { useJourneySession } from '@/composables/useJourneySession'
 
 const router = useRouter()
+const { setRouteInput, setRouteAnalysis, setMusicSegments, clearSession } = useJourneySession()
 
 const isProcessing = ref(true)
 const currentStep = ref(0)
 const completedSteps = ref<number[]>([])
 const currentReasoning = ref('')
+const currentStatus = ref<'idle' | 'loading-model' | 'analyzing' | 'generating-music' | 'success' | 'error'>('idle')
 const missionData = ref<{
   destination: string
   estimatedTime: number
@@ -21,6 +24,9 @@ const missionData = ref<{
 } | null>(null)
 
 const aiGeneratedSteps = ref<RouteStep[]>([])
+const errorMessage = ref<string | null>(null)
+const analysisSource = ref<'ai' | 'fallback'>('ai')
+const musicSource = ref<'ai' | 'fallback'>('ai')
 
 const iconMap: Record<string, any> = {
   Building2,
@@ -52,47 +58,82 @@ onMounted(() => {
 
 const runBrainWorkflow = async () => {
   currentReasoning.value = reasoningSteps[0].text
+  currentStatus.value = 'loading-model'
   
-  const analysis = await analyzeRoute({ 
-    start: 'Central Station', 
+  const routeInput = {
+    start: 'Central Station',
     end: 'Airport',
     weather: 'Sunny',
     estimatedTime: 23,
     driverStyle: 'Balanced'
-  })
-  
-  missionData.value = {
-    destination: analysis.destination,
-    estimatedTime: analysis.estimatedTime,
-    weather: analysis.weather,
-    traffic: analysis.traffic,
-    driverStyle: analysis.driverStyle,
-    mood: analysis.mood
   }
   
-  aiGeneratedSteps.value = analysis.steps
+  clearSession()
+  setRouteInput(routeInput)
   
-  for (let i = 1; i < reasoningSteps.length; i++) {
-    await delay(reasoningSteps[i-1].duration)
-    currentReasoning.value = reasoningSteps[i].text
+  try {
+    currentStatus.value = 'analyzing'
+    const analysisResult: APIResult<RouteAnalysis> = await analyzeRoute(routeInput)
+    analysisSource.value = analysisResult.source
     
-    if (i === 3) {
-      await generateMusic({ routeAnalysis: analysis })
+    if (analysisResult.error) {
+      console.warn('AI analysis error:', analysisResult.error)
+      errorMessage.value = errorMessage.value ? `${errorMessage.value}; ${analysisResult.error}` : analysisResult.error
     }
     
-    if (i === 5) {
-      await cache({ segmentIds: ['Calm_01', 'Build_01', 'Cruise_02', 'Peak_01', 'Ending_01'] })
+    setRouteAnalysis(analysisResult.data!, analysisResult.source)
+    
+    missionData.value = {
+      destination: analysisResult.data!.destination,
+      estimatedTime: analysisResult.data!.estimatedTime,
+      weather: analysisResult.data!.weather,
+      traffic: analysisResult.data!.traffic,
+      driverStyle: analysisResult.data!.driverStyle,
+      mood: analysisResult.data!.mood
     }
+    
+    aiGeneratedSteps.value = analysisResult.data!.steps
+    
+    for (let i = 1; i < reasoningSteps.length; i++) {
+      await delay(reasoningSteps[i-1].duration)
+      currentReasoning.value = reasoningSteps[i].text
+      
+      if (i === 3) {
+        currentStatus.value = 'generating-music'
+        const musicResult: APIResult<MusicGeneration> = await generateMusic({ routeAnalysis: analysisResult.data! })
+        musicSource.value = musicResult.source
+        
+        if (musicResult.error) {
+          console.warn('AI music error:', musicResult.error)
+        }
+        
+        setMusicSegments(musicResult.data!, musicResult.source)
+      }
+      
+      if (i === 5) {
+        await cache({ segmentIds: ['Calm_01', 'Build_01', 'Cruise_02', 'Peak_01', 'Ending_01'] })
+      }
+    }
+    
+    for (let i = 0; i < aiGeneratedSteps.value.length; i++) {
+      await delay(800)
+      currentStep.value = i + 1
+      completedSteps.value.push(i + 1)
+    }
+    
+    await delay(1000)
+    currentStatus.value = 'success'
+    isProcessing.value = false
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : 'Unknown error'
+    currentStatus.value = 'error'
+    isProcessing.value = false
   }
-  
-  for (let i = 0; i < aiGeneratedSteps.value.length; i++) {
-    await delay(800)
-    currentStep.value = i + 1
-    completedSteps.value.push(i + 1)
-  }
-  
-  await delay(1000)
-  isProcessing.value = false
+}
+
+const retryWorkflow = () => {
+  errorMessage.value = null
+  runBrainWorkflow()
 }
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
@@ -117,9 +158,22 @@ const continueJourney = () => {
       <div class="flex items-center gap-2">
         <div 
           class="w-2 h-2 rounded-full transition-colors duration-300"
-          :class="isProcessing ? 'bg-green-400 animate-pulse' : 'bg-blue-400'"
+          :class="{
+            'bg-yellow-400 animate-pulse': currentStatus === 'loading-model',
+            'bg-blue-400 animate-pulse': currentStatus === 'analyzing',
+            'bg-purple-400 animate-pulse': currentStatus === 'generating-music',
+            'bg-green-400': currentStatus === 'success',
+            'bg-red-400': currentStatus === 'error',
+            'bg-blue-400': currentStatus === 'idle'
+          }"
         ></div>
-        <span class="text-white/60 text-sm">{{ isProcessing ? 'AI Thinking...' : 'Ready' }}</span>
+        <span class="text-white/60 text-sm">
+          {{ currentStatus === 'loading-model' ? 'Loading Model...' : 
+             currentStatus === 'analyzing' ? 'Analyzing Route...' : 
+             currentStatus === 'generating-music' ? 'Generating Music...' : 
+             currentStatus === 'success' ? 'Analysis Complete' : 
+             currentStatus === 'error' ? 'Generation Failed' : 'AI Thinking...' }}
+        </span>
       </div>
     </nav>
     
@@ -191,6 +245,25 @@ const continueJourney = () => {
               </div>
             </div>
             
+            <div 
+              v-if="errorMessage"
+              class="glass-card p-4 bg-red-500/20 border border-red-500/30"
+            >
+              <div class="flex items-center gap-3">
+                <AlertCircle class="w-5 h-5 text-red-400 flex-shrink-0" />
+                <div class="flex-1">
+                  <div class="text-red-400 font-semibold">AI Generation Failed</div>
+                  <div class="text-white/70 text-sm">{{ errorMessage }}</div>
+                </div>
+                <button 
+                  @click="retryWorkflow"
+                  class="p-2 bg-red-500/30 hover:bg-red-500/50 rounded-lg transition-colors"
+                >
+                  <RefreshCw class="w-5 h-5 text-red-400" />
+                </button>
+              </div>
+            </div>
+            
             <button 
               v-if="!isProcessing"
               @click="continueJourney"
@@ -203,7 +276,15 @@ const continueJourney = () => {
           
           <div class="lg:col-span-1">
             <div class="glass-card p-6 h-full">
-              <h3 class="text-white font-semibold mb-6 text-center">Journey Blueprint</h3>
+              <div class="flex items-center gap-3 mb-6">
+                <h3 class="text-white font-semibold text-center flex-1">Journey Blueprint</h3>
+                <span 
+                  class="text-xs px-2 py-1 rounded-full"
+                  :class="analysisSource === 'ai' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'"
+                >
+                  {{ analysisSource === 'ai' ? 'AI Generated' : 'Fallback Demo' }}
+                </span>
+              </div>
               
               <div v-if="aiGeneratedSteps.length > 0" class="space-y-1">
                 <div 

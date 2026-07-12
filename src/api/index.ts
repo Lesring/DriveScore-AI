@@ -1,4 +1,4 @@
-import { generateJSON } from '@/ai/aiService'
+import { generateJSON, type AIResponse } from '@/ai/aiService'
 import { analyzeRoutePrompt, generateMusicPrompt, predictPrompt } from '@/ai/prompts'
 
 export interface AnalyzeRouteRequest {
@@ -45,6 +45,7 @@ export interface MusicSegment {
   progress: number
   emotion?: string
   reason?: string
+  audioUrl?: string
 }
 
 export interface MusicGeneration {
@@ -83,6 +84,12 @@ export interface CacheResult {
   status: 'loading' | 'ready' | 'preloading'
 }
 
+export interface APIResult<T> {
+  data: T | null
+  error: string | null
+  source: 'ai' | 'fallback'
+}
+
 const fallbackAnalyzeRoute = (request: AnalyzeRouteRequest): RouteAnalysis => ({
   destination: request.end,
   estimatedTime: request.estimatedTime || 23,
@@ -99,14 +106,25 @@ const fallbackAnalyzeRoute = (request: AnalyzeRouteRequest): RouteAnalysis => ({
   ]
 })
 
+const getAudioUrlForStyle = (style: string): string => {
+  const styleMap: Record<string, string> = {
+    'calm': '/music/Calm.mp3',
+    'build': '/music/Build.mp3',
+    'cruise': '/music/Cruise.mp3',
+    'peak': '/music/Peak.mp3',
+    'ending': '/music/Ending.mp3'
+  }
+  return styleMap[style.toLowerCase()] || '/music/Calm.mp3'
+}
+
 const fallbackGenerateMusic = (): MusicGeneration => ({
   status: 'completed',
   segments: [
-    { id: 'Calm_01', style: 'Calm', energy: 25, tempo: 65, key: 'C Major', duration: 180, progress: 100, emotion: 'Relax', reason: 'Urban driving requires calm music' },
-    { id: 'Build_01', style: 'Build', energy: 50, tempo: 95, key: 'A Minor', duration: 150, progress: 100, emotion: 'Building', reason: 'Preparing for highway' },
-    { id: 'Cruise_02', style: 'Cruise', energy: 75, tempo: 125, key: 'F Major', duration: 240, progress: 100, emotion: 'Energetic', reason: 'Highway cruising' },
-    { id: 'Peak_01', style: 'Peak', energy: 95, tempo: 145, key: 'D Minor', duration: 120, progress: 100, emotion: 'Intense', reason: 'High speed peak' },
-    { id: 'Ending_01', style: 'Ending', energy: 35, tempo: 75, key: 'C Major', duration: 180, progress: 100, emotion: 'Peaceful', reason: 'Arriving at destination' }
+    { id: 'Calm_01', style: 'Calm', energy: 25, tempo: 65, key: 'C Major', duration: 180, progress: 100, emotion: 'Relax', reason: 'Urban driving requires calm music', audioUrl: getAudioUrlForStyle('Calm') },
+    { id: 'Build_01', style: 'Build', energy: 50, tempo: 95, key: 'A Minor', duration: 150, progress: 100, emotion: 'Building', reason: 'Preparing for highway', audioUrl: getAudioUrlForStyle('Build') },
+    { id: 'Cruise_02', style: 'Cruise', energy: 75, tempo: 125, key: 'F Major', duration: 240, progress: 100, emotion: 'Energetic', reason: 'Highway cruising', audioUrl: getAudioUrlForStyle('Cruise') },
+    { id: 'Peak_01', style: 'Peak', energy: 95, tempo: 145, key: 'D Minor', duration: 120, progress: 100, emotion: 'Intense', reason: 'High speed peak', audioUrl: getAudioUrlForStyle('Peak') },
+    { id: 'Ending_01', style: 'Ending', energy: 35, tempo: 75, key: 'C Major', duration: 180, progress: 100, emotion: 'Peaceful', reason: 'Arriving at destination', audioUrl: getAudioUrlForStyle('Ending') }
   ]
 })
 
@@ -122,7 +140,7 @@ const fallbackPredict = (request: PredictRequest): Prediction => {
   return predictions[index]
 }
 
-export const analyzeRoute = async (request: AnalyzeRouteRequest): Promise<RouteAnalysis> => {
+export const analyzeRoute = async (request: AnalyzeRouteRequest): Promise<APIResult<RouteAnalysis>> => {
   const promptInput = {
     start: request.start,
     end: request.end,
@@ -132,17 +150,24 @@ export const analyzeRoute = async (request: AnalyzeRouteRequest): Promise<RouteA
   }
   
   const prompt = analyzeRoutePrompt(promptInput)
-  const response = await generateJSON<RouteAnalysis>(prompt, 2)
+  const response: AIResponse<RouteAnalysis> = await generateJSON<RouteAnalysis>(prompt, 2)
   
   if (response.data) {
-    return response.data
+    return {
+      data: response.data,
+      error: response.error,
+      source: response.source
+    }
   }
   
-  console.warn('AI generation failed, using fallback:', response.error)
-  return fallbackAnalyzeRoute(request)
+  return {
+    data: fallbackAnalyzeRoute(request),
+    error: response.error || 'AI generation failed',
+    source: 'fallback'
+  }
 }
 
-export const generateMusic = async (request: GenerateMusicRequest): Promise<MusicGeneration> => {
+export const generateMusic = async (request: GenerateMusicRequest): Promise<APIResult<MusicGeneration>> => {
   const promptInput = {
     journeyBlueprint: {
       steps: request.routeAnalysis.steps
@@ -150,17 +175,24 @@ export const generateMusic = async (request: GenerateMusicRequest): Promise<Musi
   }
   
   const prompt = generateMusicPrompt(promptInput)
-  const response = await generateJSON<MusicGeneration>(prompt, 2)
+  const response: AIResponse<MusicGeneration> = await generateJSON<MusicGeneration>(prompt, 2)
   
   if (response.data) {
-    return response.data
+    return {
+      data: response.data,
+      error: response.error,
+      source: response.source
+    }
   }
   
-  console.warn('AI generation failed, using fallback:', response.error)
-  return fallbackGenerateMusic()
+  return {
+    data: fallbackGenerateMusic(),
+    error: response.error || 'AI generation failed',
+    source: 'fallback'
+  }
 }
 
-export const predict = async (request: PredictRequest): Promise<Prediction> => {
+export const predict = async (request: PredictRequest): Promise<APIResult<Prediction>> => {
   const roadMap: Record<string, string> = {
     parking: 'Urban',
     city: 'Urban',
@@ -191,14 +223,21 @@ export const predict = async (request: PredictRequest): Promise<Prediction> => {
   }
   
   const prompt = predictPrompt(promptInput)
-  const response = await generateJSON<Prediction>(prompt, 2)
+  const response: AIResponse<Prediction> = await generateJSON<Prediction>(prompt, 2)
   
   if (response.data) {
-    return response.data
+    return {
+      data: response.data,
+      error: response.error,
+      source: response.source
+    }
   }
   
-  console.warn('AI generation failed, using fallback:', response.error)
-  return fallbackPredict(request)
+  return {
+    data: fallbackPredict(request),
+    error: response.error || 'AI generation failed',
+    source: 'fallback'
+  }
 }
 
 export const cache = async (request: CacheRequest): Promise<CacheResult> => {

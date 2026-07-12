@@ -79,7 +79,7 @@ const getKey = () => {
 </script>
 
 <template>
-  <div class="fixed right-4 top-24 w-80 z-20">
+  <div class="fixed right-6 top-28 w-72 z-50">
     <div class="glass-card p-5 backdrop-blur-2xl border-white/15 shadow-2xl">
       <div class="flex items-center gap-2 mb-4 pb-4 border-b border-white/10">
         <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">

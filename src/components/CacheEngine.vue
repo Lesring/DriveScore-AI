@@ -72,7 +72,7 @@ const getSegmentStatus = (segment: string) => {
         />
         <Check v-else class="w-4 h-4 text-green-400" />
         <span :class="isLoading ? 'text-blue-400' : 'text-green-400'" class="text-sm">
-          {{ isLoading ? 'Caching...' : 'Ready' }}
+          {{ isLoading ? 'Preloading...' : 'Ready' }}
         </span>
       </div>
     </div>
@@ -126,6 +126,13 @@ const getSegmentStatus = (segment: string) => {
               }"
             >
               {{ segment }}
+            </span>
+            
+            <span 
+              v-if="getSegmentStatus(segment) === 'cached'"
+              class="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400"
+            >
+              Cached
             </span>
           </div>
           

@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { Music, Clock, Zap, ChevronRight, Download, Loader2, Play } from 'lucide-vue-next'
+import { Music, Clock, Zap, ChevronRight, Download, Loader2, Play, Pause } from 'lucide-vue-next'
 import { musicLibrary } from '@/mock/data'
+import { audioManager, type AudioSource } from '@/audio/AudioManager'
 
 const router = useRouter()
 const activeStyle = ref<'calm' | 'build' | 'cruise' | 'peak' | 'ending'>('build')
-const playingSegment = ref<string | null>('Build_01')
+const playingSegment = ref<string | null>(null)
+const isLoading = ref<string | null>(null)
 
 const styles = [
   { id: 'calm', name: 'Calm', color: '#10b981' },
@@ -37,8 +39,49 @@ const goHome = () => {
   router.push('/')
 }
 
-const playSegment = (id: string) => {
-  playingSegment.value = playingSegment.value === id ? null : id
+const getAudioUrlForStyle = (style: string): string => {
+  const styleMap: Record<string, string> = {
+    'calm': '/music/Calm.mp3',
+    'build': '/music/Build.mp3',
+    'cruise': '/music/Cruise.mp3',
+    'peak': '/music/Peak.mp3',
+    'ending': '/music/Ending.mp3'
+  }
+  return styleMap[style.toLowerCase()] || '/music/Calm.mp3'
+}
+
+const playSegment = async (id: string) => {
+  if (playingSegment.value === id) {
+    audioManager.stop()
+    playingSegment.value = null
+    return
+  }
+
+  isLoading.value = id
+  
+  try {
+    const segment = musicLibrary.find(m => m.id === id)
+    if (!segment) return
+
+    const audioSource: AudioSource = {
+      id: segment.id,
+      type: 'synthesized',
+      segment: {
+        ...segment,
+        tempo: segment.bpm,
+        progress: 100,
+        style: segment.style.charAt(0).toUpperCase() + segment.style.slice(1),
+        audioUrl: getAudioUrlForStyle(segment.style)
+      }
+    }
+
+    await audioManager.play(audioSource, { fadeIn: 500, loop: true })
+    playingSegment.value = id
+  } catch (error) {
+    console.error('Failed to play segment:', error)
+  } finally {
+    isLoading.value = null
+  }
 }
 </script>
 
@@ -129,15 +172,25 @@ const playSegment = (id: string) => {
               
               <button 
                 @click="playSegment(segment.id)"
+                :disabled="isLoading === segment.id"
                 class="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300"
                 :class="{
                   'bg-primary': getSegmentStatus(segment.id) === 'playing',
-                  'bg-white/10 hover:bg-white/20': getSegmentStatus(segment.id) !== 'playing'
+                  'bg-white/10 hover:bg-white/20': getSegmentStatus(segment.id) !== 'playing',
+                  'opacity-50': isLoading === segment.id
                 }"
               >
+                <Loader2 
+                  v-if="isLoading === segment.id"
+                  class="w-5 h-5 text-white animate-spin"
+                />
+                <Pause 
+                  v-else-if="getSegmentStatus(segment.id) === 'playing'"
+                  class="w-5 h-5 text-white"
+                />
                 <Play 
+                  v-else 
                   class="w-5 h-5 text-white" 
-                  :class="{ 'animate-pulse': getSegmentStatus(segment.id) === 'playing' }"
                 />
               </button>
             </div>
@@ -239,7 +292,7 @@ const playSegment = (id: string) => {
             </div>
             
             <div class="bg-white/5 rounded-lg p-4">
-              <div class="text-2xl font-bold text-primary mb-1">1</div>
+              <div class="text-2xl font-bold text-primary mb-1">{{ playingSegment ? 1 : 0 }}</div>
               <div class="text-white/50 text-sm">Playing</div>
             </div>
           </div>

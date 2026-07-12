@@ -50,7 +50,7 @@ const getSegmentStatus = (index: number) => {
 </script>
 
 <template>
-  <div class="fixed bottom-0 left-0 right-0 z-20">
+  <div class="fixed bottom-0 left-0 right-0 z-30">
     <div class="glass-card mx-4 mb-4 p-4 backdrop-blur-xl border-white/10">
       <div class="flex items-center justify-between mb-3">
         <span class="text-white/60 text-sm">Journey Timeline</span>

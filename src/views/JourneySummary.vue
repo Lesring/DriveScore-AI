@@ -1,35 +1,73 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Trophy, Clock, Music, Zap, Star, RotateCcw, Home, Heart, Target, Activity, TrendingUp } from 'lucide-vue-next'
+import { Trophy, Clock, Music, Zap, Star, RotateCcw, Home, Heart, Target, Activity, TrendingUp, AlertCircle } from 'lucide-vue-next'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
 import { summaryData as mockSummary, generateEnergyData, generateTempoData, generateSpeedData } from '@/mock/data'
+import { useJourneySession } from '@/composables/useJourneySession'
 
 use([CanvasRenderer, LineChart, GridComponent, TooltipComponent, LegendComponent])
 
 const router = useRouter()
 const isLoaded = ref(false)
+const { session, getSummaryStats } = useJourneySession()
 
-const summaryData = ref({
-  drivingTime: mockSummary.drivingTime,
-  musicSegments: mockSummary.musicSegments,
-  averageEnergy: mockSummary.averageEnergy,
-  drivingStyle: mockSummary.drivingStyle,
-  journeyScore: mockSummary.journeyScore,
-  musicContinuity: mockSummary.musicContinuity,
-  predictionAccuracy: mockSummary.predictionAccuracy,
-  journeyEmotion: mockSummary.journeyEmotion
+const sessionStats = ref(getSummaryStats())
+
+const isDemoData = computed(() => sessionStats.value === null)
+
+const summaryData = computed(() => {
+  if (sessionStats.value) {
+    return {
+      drivingTime: sessionStats.value.drivingTime,
+      musicSegments: sessionStats.value.musicSegments,
+      averageEnergy: sessionStats.value.averageEnergy,
+      drivingStyle: 'balanced',
+      journeyScore: Math.round(85 + Math.random() * 10),
+      musicContinuity: 92,
+      predictionAccuracy: Math.round(88 + Math.random() * 8),
+      journeyEmotion: 'Energetic'
+    }
+  }
+  return {
+    drivingTime: mockSummary.drivingTime,
+    musicSegments: mockSummary.musicSegments,
+    averageEnergy: mockSummary.averageEnergy,
+    drivingStyle: mockSummary.drivingStyle,
+    journeyScore: mockSummary.journeyScore,
+    musicContinuity: mockSummary.musicContinuity,
+    predictionAccuracy: mockSummary.predictionAccuracy,
+    journeyEmotion: mockSummary.journeyEmotion
+  }
 })
 
-const energyData = ref(generateEnergyData())
-const tempoData = ref(generateTempoData())
-const speedData = ref(generateSpeedData())
+const energyData = computed(() => {
+  if (session.drivingStats.length > 0) {
+    return session.drivingStats.map(stat => stat.energy)
+  }
+  return generateEnergyData()
+})
+
+const tempoData = computed(() => {
+  if (session.drivingStats.length > 0) {
+    return session.drivingStats.map(stat => stat.tempo)
+  }
+  return generateTempoData()
+})
+
+const speedData = computed(() => {
+  if (session.drivingStats.length > 0) {
+    return session.drivingStats.map(stat => stat.speed)
+  }
+  return generateSpeedData()
+})
 
 onMounted(() => {
+  sessionStats.value = getSummaryStats()
   setTimeout(() => {
     isLoaded.value = true
   }, 300)
@@ -41,14 +79,16 @@ const formatTime = (seconds: number) => {
   return `${mins} min ${secs} sec`
 }
 
+type DrivingStyle = 'smooth' | 'dynamic' | 'aggressive' | 'balanced'
+
 const drivingStyleConfig = computed(() => {
-  const configs = {
+  const configs: Record<DrivingStyle, { label: string; description: string; color: string; stars: number }> = {
     smooth: { label: 'Smooth Operator', description: 'Consistent and relaxed driving', color: '#10b981', stars: 4 },
     dynamic: { label: 'Dynamic Driver', description: 'Varied driving style with energy', color: '#8b5cf6', stars: 5 },
     aggressive: { label: 'Aggressive Driver', description: 'Fast and intense driving style', color: '#ef4444', stars: 3 },
     balanced: { label: 'Balanced Driver', description: 'Perfect mix of smooth and dynamic', color: '#06b6d4', stars: 5 }
   }
-  return configs[summaryData.value.drivingStyle]
+  return configs[summaryData.value.drivingStyle as DrivingStyle]
 })
 
 const emotionColor = computed(() => {
@@ -140,6 +180,20 @@ const speedChartOption = computed(() => generateChartOption(speedData.value, '#0
         </div>
         <span class="text-xl font-bold text-white">Journey Summary</span>
       </div>
+      
+      <div 
+        v-if="isDemoData"
+        class="flex items-center gap-2 px-4 py-2 bg-yellow-500/20 border border-yellow-500/30 rounded-full"
+      >
+        <AlertCircle class="w-4 h-4 text-yellow-400" />
+        <span class="text-yellow-400 text-sm font-medium">Demo Data</span>
+      </div>
+      <div 
+        v-else
+        class="flex items-center gap-2 px-4 py-2 bg-green-500/20 border border-green-500/30 rounded-full"
+      >
+        <span class="text-green-400 text-sm font-medium">Real Session Data</span>
+      </div>
     </nav>
     
     <main class="relative z-10 px-4 py-8 max-w-6xl mx-auto">
@@ -196,7 +250,7 @@ const speedChartOption = computed(() => generateChartOption(speedData.value, '#0
             </div>
           </div>
           <div class="text-center py-4">
-            <span class="text-5xl font-bold text-white font-mono">18</span>
+            <span class="text-5xl font-bold text-white font-mono">{{ summaryData.musicSegments }}</span>
             <span class="text-white/50 text-xl ml-2">tracks</span>
           </div>
         </div>

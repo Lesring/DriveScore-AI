@@ -1,39 +1,82 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { MapPin, Navigation, ChevronDown, Music, Clock, Zap } from 'lucide-vue-next'
+import { MapPin, Navigation, ChevronDown, Music, Clock, Zap, AlertCircle, RefreshCw } from 'lucide-vue-next'
 import type { JourneyBlueprint } from '@/types'
 import ComposerPanel from '@/components/ComposerPanel.vue'
 import CacheEngine from '@/components/CacheEngine.vue'
-import { analyzeRoute, generateMusic, type RouteAnalysis, type MusicGeneration } from '@/api'
+import { analyzeRoute, generateMusic, type RouteAnalysis, type MusicGeneration, type APIResult } from '@/api'
+import { useJourneySession } from '@/composables/useJourneySession'
 
 const router = useRouter()
+const { setRouteInput, setRouteAnalysis, setMusicSegments, clearSession } = useJourneySession()
 
 const startPoint = ref('')
 const endPoint = ref('')
 const isGenerating = ref(false)
+const currentStatus = ref<'idle' | 'loading-model' | 'analyzing' | 'generating-music' | 'success' | 'error'>('idle')
 const blueprint = ref<JourneyBlueprint | null>(null)
 const showComposer = ref(false)
 const showCache = ref(false)
 const aiAnalysis = ref<RouteAnalysis | null>(null)
 const aiMusicGeneration = ref<MusicGeneration | null>(null)
+const errorMessage = ref<string | null>(null)
+const analysisSource = ref<'ai' | 'fallback'>('ai')
+const musicSource = ref<'ai' | 'fallback'>('ai')
 
 const generateBlueprint = async () => {
   if (!startPoint.value || !endPoint.value) return
   
   isGenerating.value = true
+  currentStatus.value = 'loading-model'
+  errorMessage.value = null
+  clearSession()
   
-  aiAnalysis.value = await analyzeRoute({ 
-    start: startPoint.value, 
+  const routeInput = {
+    start: startPoint.value,
     end: endPoint.value,
     weather: 'Sunny',
     estimatedTime: 23,
     driverStyle: 'Balanced'
-  })
+  }
   
-  aiMusicGeneration.value = await generateMusic({ routeAnalysis: aiAnalysis.value })
+  setRouteInput(routeInput)
   
-  showComposer.value = true
+  try {
+    currentStatus.value = 'analyzing'
+    const analysisResult: APIResult<RouteAnalysis> = await analyzeRoute(routeInput)
+    analysisSource.value = analysisResult.source
+    
+    if (analysisResult.error) {
+      console.warn('AI analysis error:', analysisResult.error)
+    }
+    
+    aiAnalysis.value = analysisResult.data!
+    setRouteAnalysis(analysisResult.data!, analysisResult.source)
+    
+    currentStatus.value = 'generating-music'
+    const musicResult: APIResult<MusicGeneration> = await generateMusic({ routeAnalysis: analysisResult.data! })
+    musicSource.value = musicResult.source
+    
+    if (musicResult.error) {
+      console.warn('AI music error:', musicResult.error)
+    }
+    
+    aiMusicGeneration.value = musicResult.data!
+    setMusicSegments(musicResult.data!, musicResult.source)
+    
+    currentStatus.value = 'success'
+    showComposer.value = true
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : 'Unknown error'
+    currentStatus.value = 'error'
+    isGenerating.value = false
+  }
+}
+
+const retryGeneration = () => {
+  errorMessage.value = null
+  generateBlueprint()
 }
 
 const onComposerComplete = () => {
@@ -78,6 +121,17 @@ const formatDuration = (seconds: number) => {
 const startJourney = () => {
   router.push('/simulation')
 }
+
+const statusText = computed(() => {
+  const statusMap: Record<string, string> = {
+    'loading-model': 'Loading AI Model...',
+    'analyzing': 'Analyzing Route...',
+    'generating-music': 'Generating Music...',
+    'success': 'Generation Complete',
+    'error': 'Generation Failed'
+  }
+  return statusMap[currentStatus.value] || 'AI Generating...'
+})
 
 const energyColor = (energy: number) => {
   if (energy < 40) return 'bg-green-500'
@@ -132,13 +186,52 @@ const energyColor = (energy: number) => {
           </div>
         </div>
         
+        <div 
+          v-if="isGenerating"
+          class="flex items-center gap-4 p-4 bg-primary/10 border border-primary/30 rounded-xl mb-6"
+        >
+          <div class="flex-1">
+            <div class="flex items-center gap-2">
+              <div class="w-3 h-3 rounded-full bg-primary animate-pulse"></div>
+              <span class="text-primary font-semibold">{{ statusText }}</span>
+            </div>
+            <div class="mt-2 h-1 bg-white/10 rounded-full overflow-hidden">
+              <div 
+                class="h-full bg-gradient-to-r from-primary to-secondary rounded-full transition-all duration-300"
+                :style="{ 
+                  width: `${currentStatus === 'loading-model' ? 15 : 
+                          currentStatus === 'analyzing' ? 45 : 
+                          currentStatus === 'generating-music' ? 75 : 100}%` 
+                }"
+              ></div>
+            </div>
+          </div>
+        </div>
+        
+        <div 
+          v-if="errorMessage"
+          class="flex items-center gap-3 p-4 bg-red-500/20 border border-red-500/30 rounded-xl mb-6"
+        >
+          <AlertCircle class="w-5 h-5 text-red-400 flex-shrink-0" />
+          <div class="flex-1">
+            <div class="text-red-400 font-semibold">AI Generation Failed</div>
+            <div class="text-white/70 text-sm">{{ errorMessage }}</div>
+          </div>
+          <button 
+            @click="retryGeneration"
+            class="p-2 bg-red-500/30 hover:bg-red-500/50 rounded-lg transition-colors"
+          >
+            <RefreshCw class="w-5 h-5 text-red-400" />
+          </button>
+        </div>
+        
         <button 
           @click="generateBlueprint"
           :disabled="!startPoint || !endPoint || isGenerating"
           class="w-full glass-button text-lg flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Navigation class="w-5 h-5" />
-          <span>{{ isGenerating ? 'Generating...' : 'Generate Journey Blueprint' }}</span>
+          <span>{{ isGenerating ? statusText : 'Generate Journey Blueprint' }}</span>
           <div 
             v-if="isGenerating"
             class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"
@@ -149,6 +242,8 @@ const energyColor = (energy: number) => {
       <ComposerPanel 
         v-if="showComposer"
         :is-visible="showComposer"
+        :analysis-source="analysisSource"
+        :music-source="musicSource"
         @completed="onComposerComplete"
       />
       
@@ -166,10 +261,18 @@ const energyColor = (energy: number) => {
           class="glass-card p-6"
           :class="{ 'animate-slide-in-right': true }"
         >
-          <h3 class="text-xl font-bold text-white mb-6 flex items-center gap-3">
-            <Navigation class="w-6 h-6 text-primary" />
-            Journey Route
-          </h3>
+          <div class="flex items-center gap-3 mb-6">
+            <h3 class="text-xl font-bold text-white flex items-center gap-3">
+              <Navigation class="w-6 h-6 text-primary" />
+              Journey Route
+            </h3>
+            <span 
+              class="text-xs px-2 py-1 rounded-full"
+              :class="analysisSource === 'ai' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'"
+            >
+              {{ analysisSource === 'ai' ? 'AI Generated' : 'Fallback Demo' }}
+            </span>
+          </div>
           
           <div class="space-y-4">
             <div 
@@ -208,10 +311,18 @@ const energyColor = (energy: number) => {
           :class="{ 'animate-slide-in-right': true }"
           style="animation-delay: 0.2s"
         >
-          <h3 class="text-xl font-bold text-white mb-6 flex items-center gap-3">
-            <Music class="w-6 h-6 text-secondary" />
-            Music Chapters
-          </h3>
+          <div class="flex items-center gap-3 mb-6">
+            <h3 class="text-xl font-bold text-white flex items-center gap-3">
+              <Music class="w-6 h-6 text-secondary" />
+              Music Chapters
+            </h3>
+            <span 
+              class="text-xs px-2 py-1 rounded-full"
+              :class="musicSource === 'ai' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'"
+            >
+              {{ musicSource === 'ai' ? 'AI Generated' : 'Fallback Demo' }}
+            </span>
+          </div>
           
           <div class="space-y-4">
             <div 

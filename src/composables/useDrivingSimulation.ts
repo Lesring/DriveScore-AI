@@ -1,15 +1,29 @@
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import type { DrivingState, DrivingData } from '@/types'
 import { stateTransitions, stateConfigs } from '@/mock/data'
 import { predict, type Prediction, type MusicSegment } from '@/api'
 import { audioManager, type AudioSource } from '@/audio/AudioManager'
+import { useJourneySession } from '@/composables/useJourneySession'
+
+const fallbackMusicSegments: MusicSegment[] = [
+  { id: 'Calm_01', style: 'Calm', energy: 25, tempo: 65, key: 'C Major', duration: 180, progress: 100, emotion: 'Relax', reason: 'Demo data - Urban driving requires calm music' },
+  { id: 'Build_01', style: 'Build', energy: 50, tempo: 95, key: 'A Minor', duration: 150, progress: 100, emotion: 'Building', reason: 'Demo data - Preparing for highway' },
+  { id: 'Cruise_02', style: 'Cruise', energy: 75, tempo: 125, key: 'F Major', duration: 240, progress: 100, emotion: 'Energetic', reason: 'Demo data - Highway cruising' },
+  { id: 'Peak_01', style: 'Peak', energy: 95, tempo: 145, key: 'D Minor', duration: 120, progress: 100, emotion: 'Intense', reason: 'Demo data - High speed peak' },
+  { id: 'Ending_01', style: 'Ending', energy: 35, tempo: 75, key: 'C Major', duration: 180, progress: 100, emotion: 'Peaceful', reason: 'Demo data - Arriving at destination' }
+]
 
 export function useDrivingSimulation() {
   const router = useRouter()
+  const { session, addDrivingStat, addPrediction, subscribe } = useJourneySession()
   
   const isDriving = ref(false)
   const isPaused = ref(false)
+  const isOverridden = ref(false)
+  const overrideEndTime = ref(0)
+  const overrideTarget = ref<{ speed: number; energy: number; tempo: number; state: string } | null>(null)
+  
   const drivingData = ref<DrivingData>({
     speed: 0,
     state: 'parking',
@@ -24,6 +38,7 @@ export function useDrivingSimulation() {
   const currentPrediction = ref<Prediction | null>(null)
   const isPredicting = ref(false)
   const currentMusicSegment = ref<MusicSegment | null>(null)
+  const musicSegments = ref<MusicSegment[]>([])
 
   const particles = ref<{
     id: number
@@ -40,14 +55,7 @@ export function useDrivingSimulation() {
   let stateDuration = 3000
   let predictInterval: number | null = null
   let lastMusicStyle = ''
-
-  const musicSegments: MusicSegment[] = [
-    { id: 'Calm_01', style: 'Calm', energy: 25, tempo: 65, key: 'C Major', duration: 180, progress: 100, emotion: 'Relax', reason: 'Urban driving requires calm music' },
-    { id: 'Build_01', style: 'Build', energy: 50, tempo: 95, key: 'A Minor', duration: 150, progress: 100, emotion: 'Building', reason: 'Preparing for highway' },
-    { id: 'Cruise_02', style: 'Cruise', energy: 75, tempo: 125, key: 'F Major', duration: 240, progress: 100, emotion: 'Energetic', reason: 'Highway cruising' },
-    { id: 'Peak_01', style: 'Peak', energy: 95, tempo: 145, key: 'D Minor', duration: 120, progress: 100, emotion: 'Intense', reason: 'High speed peak' },
-    { id: 'Ending_01', style: 'Ending', energy: 35, tempo: 75, key: 'C Major', duration: 180, progress: 100, emotion: 'Peaceful', reason: 'Arriving at destination' }
-  ]
+  let musicChangesCount = 0
 
   for (let i = 0; i < 30; i++) {
     particles.value.push({
@@ -82,7 +90,7 @@ export function useDrivingSimulation() {
   })
 
   const getMusicSegmentForStyle = (style: string): MusicSegment | undefined => {
-    return musicSegments.find(s => s.style.toLowerCase() === style.toLowerCase())
+    return musicSegments.value.find(s => s.style.toLowerCase() === style.toLowerCase())
   }
 
   const getMusicSegmentForState = (state: DrivingState): MusicSegment | undefined => {
@@ -105,12 +113,23 @@ export function useDrivingSimulation() {
 
     const audioSource: AudioSource = {
       id: segment.id,
-      type: 'synthesized',
+      type: segment.audioUrl ? 'url' : 'synthesized',
+      url: segment.audioUrl,
       segment
     }
 
     await audioManager.play(audioSource, { fadeIn: 1500, loop: true })
     currentMusicSegment.value = segment
+    musicChangesCount++
+    
+    addDrivingStat({
+      timestamp: Date.now(),
+      speed: Math.round(drivingData.value.speed),
+      energy: Math.round(drivingData.value.energy),
+      tempo: Math.round(drivingData.value.tempo),
+      musicStyle: segment.style,
+      segmentId: segment.id
+    })
   }
 
   const updateAudioParameters = () => {
@@ -118,11 +137,75 @@ export function useDrivingSimulation() {
     audioManager.setTempo(drivingData.value.tempo)
   }
 
+  const applyOverride = async (target: { speed: number; energy: number; tempo: number; state: string; musicStyle?: string }) => {
+    if (!isDriving.value) return
+
+    isOverridden.value = true
+    overrideTarget.value = target
+    overrideEndTime.value = Date.now() + 8000
+
+    drivingData.value.state = target.state as DrivingState
+    
+    if (target.musicStyle) {
+      const segment = getMusicSegmentForStyle(target.musicStyle)
+      if (segment) {
+        const audioSource: AudioSource = {
+          id: segment.id,
+          type: segment.audioUrl ? 'url' : 'synthesized',
+          url: segment.audioUrl,
+          segment
+        }
+        await audioManager.crossfadeTo(audioSource, 1000)
+        currentMusicSegment.value = segment
+      }
+    }
+
+    currentPrediction.value = session.predictions[session.predictions.length - 1] || null
+  }
+
+  const checkOverrideExpired = () => {
+    if (isOverridden.value && Date.now() >= overrideEndTime.value) {
+      isOverridden.value = false
+      overrideTarget.value = null
+    }
+  }
+
+  const handleRerouteResult = () => {
+    if (!session.lastRerouteResult || !isDriving.value) return
+    
+    const result = session.lastRerouteResult
+    applyOverride({
+      speed: result.targetSpeed || 60,
+      energy: result.targetEnergy || 50,
+      tempo: result.targetTempo || 100,
+      state: result.roadType?.toLowerCase() === 'highway' ? 'highway' : 
+             result.roadType?.toLowerCase() === 'mountain' ? 'city' : 'city',
+      musicStyle: getMusicSegmentForState(result.roadType?.toLowerCase() as DrivingState)?.style
+    })
+  }
+
+  const unsubscribe = subscribe(handleRerouteResult)
+
+  onUnmounted(() => {
+    unsubscribe()
+    stop()
+  })
+
   const startDriving = () => {
+    musicSegments.value = session.musicSegments.length > 0 
+      ? session.musicSegments 
+      : fallbackMusicSegments
+    
+    if (session.musicSegments.length === 0) {
+      console.warn('[DrivingSimulation] Using fallback music segments - no session data available')
+    }
+    
     isDriving.value = true
     isPaused.value = false
+    isOverridden.value = false
     currentStateIndex = 0
     stateTimer = 0
+    musicChangesCount = 0
     drivingData.value = {
       speed: 0,
       state: 'parking',
@@ -136,7 +219,7 @@ export function useDrivingSimulation() {
     lastTime = performance.now()
     
     predictInterval = window.setInterval(() => {
-      if (!isPaused.value && isDriving.value) {
+      if (!isPaused.value && isDriving.value && !isOverridden.value) {
         runPrediction()
       }
     }, 3000)
@@ -148,12 +231,17 @@ export function useDrivingSimulation() {
   const runPrediction = async () => {
     isPredicting.value = true
     try {
-      const prediction = await predict({
+      const predictionResult = await predict({
         currentState: drivingData.value.state,
         time: Math.floor(drivingData.value.time),
         currentSpeed: Math.round(drivingData.value.speed)
       })
+      
+      if (!predictionResult.data) return
+      
+      const prediction = predictionResult.data
       currentPrediction.value = prediction
+      addPrediction(prediction)
 
       if (prediction.nextEnergy !== undefined) {
         audioManager.setEnergy(prediction.nextEnergy)
@@ -166,11 +254,22 @@ export function useDrivingSimulation() {
       if (predictedSegment && predictedSegment.id !== currentMusicSegment.value?.id) {
         const audioSource: AudioSource = {
           id: predictedSegment.id,
-          type: 'synthesized',
+          type: predictedSegment.audioUrl ? 'url' : 'synthesized',
+          url: predictedSegment.audioUrl,
           segment: predictedSegment
         }
         await audioManager.crossfadeTo(audioSource, 1500)
         currentMusicSegment.value = predictedSegment
+        musicChangesCount++
+        
+        addDrivingStat({
+          timestamp: Date.now(),
+          speed: Math.round(drivingData.value.speed),
+          energy: Math.round(drivingData.value.energy),
+          tempo: Math.round(drivingData.value.tempo),
+          musicStyle: predictedSegment.style,
+          segmentId: predictedSegment.id
+        })
       }
     } catch (error) {
       console.error('Prediction failed:', error)
@@ -197,36 +296,47 @@ export function useDrivingSimulation() {
     const deltaTime = currentTime - lastTime
     lastTime = currentTime
 
-    stateTimer += deltaTime
+    checkOverrideExpired()
 
-    if (stateTimer >= stateDuration) {
-      stateTimer = 0
-      currentStateIndex++
-      if (currentStateIndex >= stateTransitions.length) {
-        finishJourney()
-        return
+    if (isOverridden.value && overrideTarget.value) {
+      drivingData.value.speed += (overrideTarget.value.speed - drivingData.value.speed) * 0.08
+      drivingData.value.energy += (overrideTarget.value.energy - drivingData.value.energy) * 0.05
+      drivingData.value.tempo += (overrideTarget.value.tempo - drivingData.value.tempo) * 0.05
+      
+      updateAudioParameters()
+    } else {
+      stateTimer += deltaTime
+
+      if (stateTimer >= stateDuration) {
+        stateTimer = 0
+        currentStateIndex++
+        if (currentStateIndex >= stateTransitions.length) {
+          finishJourney()
+          return
+        }
+        drivingData.value.state = stateTransitions[currentStateIndex]
+        const config = stateConfigs[drivingData.value.state]
+        stateDuration = config.energy > 80 ? 4000 : 5000
       }
-      drivingData.value.state = stateTransitions[currentStateIndex]
+
       const config = stateConfigs[drivingData.value.state]
-      stateDuration = config.energy > 80 ? 4000 : 5000
+      const targetSpeed = getTargetSpeed(drivingData.value.state)
+
+      drivingData.value.speed += (targetSpeed - drivingData.value.speed) * 0.05
+      drivingData.value.energy += (config.energy - drivingData.value.energy) * 0.02
+      drivingData.value.tempo += (config.tempo - drivingData.value.tempo) * 0.02
+      drivingData.value.musicStyle = config.style
+
+      updateAudioParameters()
+
+      if (drivingData.value.musicStyle !== lastMusicStyle && drivingData.value.state !== 'parking') {
+        lastMusicStyle = drivingData.value.musicStyle
+        playMusicForState(drivingData.value.state)
+      }
     }
 
-    const config = stateConfigs[drivingData.value.state]
-    const targetSpeed = getTargetSpeed(drivingData.value.state)
-
-    drivingData.value.speed += (targetSpeed - drivingData.value.speed) * 0.05
-    drivingData.value.energy += (config.energy - drivingData.value.energy) * 0.02
-    drivingData.value.tempo += (config.tempo - drivingData.value.tempo) * 0.02
-    drivingData.value.musicStyle = config.style
     drivingData.value.distance += drivingData.value.speed * (deltaTime / 3600)
     drivingData.value.time += deltaTime / 1000
-
-    updateAudioParameters()
-
-    if (drivingData.value.musicStyle !== lastMusicStyle && drivingData.value.state !== 'parking') {
-      lastMusicStyle = drivingData.value.musicStyle
-      playMusicForState(drivingData.value.state)
-    }
 
     particles.value.forEach(p => {
       p.x += (p.speed * (drivingData.value.speed / 100)) * (deltaTime / 16)
@@ -269,7 +379,7 @@ export function useDrivingSimulation() {
   }
 
   watch(() => drivingData.value.state, (newState) => {
-    if (isDriving.value && !isPaused.value && newState !== 'parking') {
+    if (isDriving.value && !isPaused.value && newState !== 'parking' && !isOverridden.value) {
       playMusicForState(newState)
     }
   })
@@ -277,6 +387,7 @@ export function useDrivingSimulation() {
   return {
     isDriving,
     isPaused,
+    isOverridden,
     drivingData,
     particles,
     currentStateConfig,
@@ -289,6 +400,8 @@ export function useDrivingSimulation() {
     stop,
     currentPrediction,
     isPredicting,
-    currentMusicSegment
+    currentMusicSegment,
+    musicSegments,
+    musicChangesCount
   }
 }

@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { CloudRain, Moon, Car, Cone, AlertTriangle, Mountain, Zap, Sun, Loader2, Brain } from 'lucide-vue-next'
+import { CloudRain, Moon, Car, Cone, AlertTriangle, Mountain, Zap, Sun, Brain } from 'lucide-vue-next'
 import { useRoadSimulator } from '@/composables/useRoadSimulator'
 
 defineProps<{
   isDriving: boolean
 }>()
 
-const { simulationState, reroutingProgress, reroutingSteps, triggerEvent, clearAllEvents } = useRoadSimulator()
+const { simulationState, triggerEvent, clearAllEvents } = useRoadSimulator()
 
 const events: { id: 'rain' | 'night' | 'traffic' | 'construction' | 'accident' | 'mountain' | 'highway'; label: string; icon: any; color: string }[] = [
   { id: 'rain', label: 'Rain', icon: CloudRain, color: '#60a5fa' },
@@ -28,33 +28,7 @@ const events: { id: 'rain' | 'night' | 'traffic' | 'construction' | 'accident' |
       <span class="text-white font-semibold">Road Simulator</span>
     </div>
     
-    <div v-if="simulationState.isRerouting" class="space-y-4">
-      <div class="flex items-center gap-2">
-        <Loader2 class="w-5 h-5 text-primary animate-spin" />
-        <span class="text-white font-semibold">AI Rerouting...</span>
-      </div>
-      
-      <div class="h-2 bg-white/10 rounded-full overflow-hidden">
-        <div 
-          class="h-full bg-gradient-to-r from-primary to-secondary rounded-full transition-all duration-300"
-          :style="{ width: `${reroutingProgress}%` }"
-        ></div>
-      </div>
-      
-      <div class="space-y-2 max-h-32 overflow-y-auto">
-        <div 
-          v-for="(step, index) in reroutingSteps" 
-          :key="index"
-          class="text-sm flex items-center gap-2"
-          :class="index === reroutingSteps.length - 1 ? 'text-primary' : 'text-white/50'"
-        >
-          <span class="w-1.5 h-1.5 rounded-full" :class="index === reroutingSteps.length - 1 ? 'bg-primary' : 'bg-white/30'"></span>
-          {{ step }}
-        </div>
-      </div>
-    </div>
-    
-    <div v-else class="space-y-4">
+    <div class="space-y-4">
       <div class="grid grid-cols-2 gap-2">
         <button
           v-for="event in events"
@@ -65,7 +39,7 @@ const events: { id: 'rain' | 'night' | 'traffic' | 'construction' | 'accident' |
             'bg-white/20 scale-105 shadow-lg': simulationState.roadState[event.id],
             'bg-white/5 hover:bg-white/10': !simulationState.roadState[event.id]
           }"
-          :disabled="!isDriving"
+          :disabled="!isDriving || simulationState.isRerouting"
         >
           <component 
             :is="event.icon" 
@@ -84,6 +58,7 @@ const events: { id: 'rain' | 'night' | 'traffic' | 'construction' | 'accident' |
       <button
         @click="clearAllEvents"
         class="w-full flex items-center justify-center gap-2 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-sm text-white/70"
+        :disabled="!isDriving || simulationState.isRerouting"
       >
         <Sun class="w-4 h-4" />
         <span>Clear All</span>

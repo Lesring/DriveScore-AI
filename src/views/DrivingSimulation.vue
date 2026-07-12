@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { onUnmounted } from 'vue'
-import { Play, Pause, Gauge, Zap, Music, Navigation, Activity } from 'lucide-vue-next'
+import { Play, Pause, Gauge, Zap, Music, Navigation, Activity, Brain, Loader2 } from 'lucide-vue-next'
 import { useDrivingSimulation } from '@/composables/useDrivingSimulation'
-import AIMusicDirectorPanel from '@/components/AIMusicDirectorPanel.vue'
+import { useJourneySession } from '@/composables/useJourneySession'
 import JourneyTimeline from '@/components/JourneyTimeline.vue'
 import AIExplainBox from '@/components/AIExplainBox.vue'
 import PredictionPanel from '@/components/PredictionPanel.vue'
@@ -13,11 +13,11 @@ import RoadSimulator from '@/components/RoadSimulator.vue'
 const {
   isDriving,
   isPaused,
+  isOverridden,
   drivingData,
   particles,
   currentStateConfig,
   stateProgress,
-  energyColor,
   formatTime,
   formatDistance,
   startDriving,
@@ -28,13 +28,15 @@ const {
   currentMusicSegment
 } = useDrivingSimulation()
 
+const { session } = useJourneySession()
+
 onUnmounted(() => {
   stop()
 })
 </script>
 
 <template>
-  <div class="min-h-screen relative overflow-hidden bg-dark pb-32">
+  <div class="min-h-screen relative overflow-hidden bg-dark">
     <div 
       class="absolute inset-0 transition-colors duration-1000"
       :style="{
@@ -54,6 +56,31 @@ onUnmounted(() => {
           transition: 'opacity 0.3s ease'
         }"
       ></div>
+    </div>
+    
+    <div 
+      v-if="session.isRerouting"
+      class="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-black/90 to-transparent p-4"
+    >
+      <div class="max-w-7xl mx-auto">
+        <div class="glass-card p-4 flex items-center gap-4">
+          <div class="flex items-center gap-3">
+            <Loader2 class="w-6 h-6 text-primary animate-spin" />
+            <span class="text-white font-semibold">AI Re-thinking...</span>
+          </div>
+          <div class="flex-1">
+            <div class="h-2 bg-white/10 rounded-full overflow-hidden">
+              <div 
+                class="h-full bg-gradient-to-r from-primary to-secondary rounded-full transition-all duration-300"
+                :style="{ width: `${session.reroutingProgress}%` }"
+              ></div>
+            </div>
+          </div>
+          <div class="text-white/60 text-sm">
+            {{ session.reroutingSteps[session.reroutingSteps.length - 1] }}
+          </div>
+        </div>
+      </div>
     </div>
     
     <nav class="relative z-10 flex items-center justify-between px-8 py-6">
@@ -79,8 +106,8 @@ onUnmounted(() => {
       </div>
     </nav>
     
-    <main class="relative z-10 px-4 py-8">
-      <div class="max-w-6xl mx-auto">
+    <main class="relative z-10 px-6 py-8 pb-64">
+      <div class="max-w-7xl mx-auto">
         <div 
           v-if="!isDriving"
           class="flex flex-col items-center justify-center min-h-[60vh]"
@@ -105,25 +132,44 @@ onUnmounted(() => {
         </div>
         
         <div v-else>
+          <div v-if="session.lastRerouteResult" class="mb-6">
+            <div class="glass-card p-4 flex items-start gap-3 border-l-4 border-primary">
+              <Brain class="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+              <div>
+                <p class="text-white font-medium">{{ session.lastRerouteResult.explanation }}</p>
+                <p class="text-white/50 text-sm mt-1">Road: {{ session.lastRerouteResult.roadType }} | Target: {{ session.lastRerouteResult.targetSpeed }} km/h</p>
+              </div>
+            </div>
+          </div>
+          
           <AIExplainBox 
             :driving-state="drivingData.state" 
             :is-driving="isDriving"
+            class="mb-6"
           />
           
-          <div class="grid lg:grid-cols-3 gap-6">
-            <div class="lg:col-span-2 space-y-6">
+          <div class="grid xl:grid-cols-4 gap-6">
+            <div class="xl:col-span-2 space-y-6">
               <div class="glass-card p-8 relative overflow-hidden">
                 <div class="scan-line"></div>
                 
                 <div class="flex items-center justify-between mb-8">
                   <div>
                     <h3 class="text-white/50 text-sm uppercase tracking-wider">Current State</h3>
-                    <p 
-                      class="text-3xl font-bold mt-2 capitalize"
-                      :style="{ color: currentStateConfig.color }"
-                    >
-                      {{ drivingData.state }}
-                    </p>
+                    <div class="flex items-center gap-2 mt-2">
+                      <p 
+                        class="text-3xl font-bold capitalize"
+                        :style="{ color: currentStateConfig.color }"
+                      >
+                        {{ drivingData.state }}
+                      </p>
+                      <span 
+                        v-if="isOverridden"
+                        class="px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 text-xs font-medium"
+                      >
+                        Event Override
+                      </span>
+                    </div>
                   </div>
                   
                   <button 
@@ -208,10 +254,10 @@ onUnmounted(() => {
             
             <div class="space-y-6">
               <PredictionPanel 
-        :is-driving="isDriving" 
-        :prediction="currentPrediction"
-        :is-predicting="isPredicting"
-      />
+                :is-driving="isDriving" 
+                :prediction="currentPrediction"
+                :is-predicting="isPredicting"
+              />
               
               <RoadSimulator :is-driving="isDriving" />
               
@@ -221,6 +267,68 @@ onUnmounted(() => {
                 :driving-state="drivingData.state" 
                 :is-driving="isDriving"
               />
+            </div>
+            
+            <div class="space-y-6">
+              <div class="glass-card p-5 backdrop-blur-2xl border-white/15 shadow-2xl">
+                <div class="flex items-center gap-2 mb-4 pb-4 border-b border-white/10">
+                  <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 21a9 9 0 1 0 7.4-13 9 9 0 0 0-5.7 11.6"/></svg>
+                  </div>
+                  <span class="text-white font-semibold">AI Music Director</span>
+                </div>
+                
+                <div class="mb-4 pb-4 border-b border-white/10">
+                  <div class="flex items-center gap-2 mb-3">
+                    <div class="w-2 h-2 rounded-full" :class="session.aiStatus === 'loading' ? 'bg-yellow-400 animate-pulse' : 'bg-green-400 animate-pulse'"></div>
+                    <span class="text-white/60 text-sm">AI STATUS</span>
+                  </div>
+                  
+                  <div class="space-y-2 text-sm">
+                    <div class="flex items-center gap-2">
+                      <div class="w-2 h-2 rounded-full" :class="session.aiStatus === 'loading' ? 'bg-yellow-400 animate-pulse' : 'bg-blue-400 animate-pulse'"></div>
+                      <span class="text-white">{{ session.aiStatus === 'loading' ? 'Re-thinking...' : 'Thinking...' }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="text-white/50">Current Road</span>
+                      <span class="text-white">{{ session.lastRerouteResult?.roadType || 'Urban Road' }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="text-white/50">Next Road</span>
+                      <span class="text-primary">{{ session.lastRerouteResult?.roadType || 'Elevated Road' }}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="mb-4 pb-4 border-b border-white/10">
+                  <div class="text-white/60 text-sm mb-2">Energy</div>
+                  <div class="text-white text-2xl font-bold">{{ Math.round(drivingData.energy) }}%</div>
+                  <div class="h-2 bg-white/10 rounded-full overflow-hidden mt-2">
+                    <div 
+                      class="h-full rounded-full transition-all duration-500"
+                      :style="{ width: `${drivingData.energy}%`, background: currentStateConfig.color }"
+                    ></div>
+                  </div>
+                </div>
+                
+                <div class="mb-4 pb-4 border-b border-white/10">
+                  <div class="text-white/60 text-sm mb-2">Tempo</div>
+                  <div class="text-white text-2xl font-bold">{{ Math.round(drivingData.tempo) }} BPM</div>
+                </div>
+                
+                <div>
+                  <div class="text-white/60 text-sm mb-2">Prediction Confidence</div>
+                  <div class="flex items-center gap-3">
+                    <div class="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+                      <div 
+                        class="h-full bg-gradient-to-r from-green-400 to-blue-400 rounded-full transition-all duration-500"
+                        :style="{ width: '95%' }"
+                      ></div>
+                    </div>
+                    <span class="text-white font-mono text-sm">95%</span>
+                  </div>
+                </div>
+              </div>
               
               <div class="glass-card p-6">
                 <h3 class="text-white font-semibold mb-4 flex items-center gap-3">
@@ -229,41 +337,33 @@ onUnmounted(() => {
                 </h3>
                 
                 <div class="flex items-center justify-center mb-4">
-                  <div class="relative w-40 h-40">
+                  <div class="relative w-32 h-32">
                     <svg class="w-full h-full transform -rotate-90">
                       <circle
-                        cx="80"
-                        cy="80"
-                        r="70"
+                        cx="64"
+                        cy="64"
+                        r="56"
                         fill="none"
                         stroke="rgba(255,255,255,0.1)"
-                        stroke-width="12"
+                        stroke-width="10"
                       />
                       <circle
-                        cx="80"
-                        cy="80"
-                        r="70"
+                        cx="64"
+                        cy="64"
+                        r="56"
                         fill="none"
                         :stroke="currentStateConfig.color"
-                        stroke-width="12"
+                        stroke-width="10"
                         stroke-linecap="round"
-                        :stroke-dasharray="`${(drivingData.energy / 100) * 440} 440`"
+                        :stroke-dasharray="`${(drivingData.energy / 100) * 352} 352`"
                         class="transition-all duration-500"
                       />
                     </svg>
                     <div class="absolute inset-0 flex flex-col items-center justify-center">
-                      <span class="text-4xl font-bold text-white">{{ Math.round(drivingData.energy) }}</span>
-                      <span class="text-white/50 text-sm">%</span>
+                      <span class="text-3xl font-bold text-white">{{ Math.round(drivingData.energy) }}</span>
+                      <span class="text-white/50 text-xs">%</span>
                     </div>
                   </div>
-                </div>
-                
-                <div class="h-3 bg-white/10 rounded-full overflow-hidden">
-                  <div 
-                    class="h-full rounded-full bg-gradient-to-r transition-all duration-500"
-                    :class="energyColor"
-                    :style="{ width: `${drivingData.energy}%` }"
-                  ></div>
                 </div>
               </div>
               
@@ -274,7 +374,7 @@ onUnmounted(() => {
                 </h3>
                 
                 <div class="text-center mb-4">
-                  <span class="text-5xl font-bold text-white font-mono">{{ Math.round(drivingData.tempo) }}</span>
+                  <span class="text-4xl font-bold text-white font-mono">{{ Math.round(drivingData.tempo) }}</span>
                   <span class="text-white/50 text-lg ml-2">BPM</span>
                 </div>
                 
@@ -282,11 +382,11 @@ onUnmounted(() => {
                   <div 
                     v-for="i in 10" 
                     :key="i"
-                    class="w-3 rounded-t-lg transition-all duration-150"
+                    class="w-2 rounded-t-lg transition-all duration-150"
                     :class="i <= Math.ceil(drivingData.tempo / 15) ? 'opacity-100' : 'opacity-20'"
                     :style="{ 
                       background: currentStateConfig.color,
-                      height: `${10 + (i * 8)}px`
+                      height: `${8 + (i * 6)}px`
                     }"
                   ></div>
                 </div>
@@ -298,7 +398,7 @@ onUnmounted(() => {
                   Speed Details
                 </h3>
                 
-                <div class="space-y-4">
+                <div class="space-y-3">
                   <div class="flex justify-between items-center">
                     <span class="text-white/50">Current</span>
                     <span class="text-white font-mono">{{ Math.round(drivingData.speed) }} km/h</span>
@@ -319,15 +419,8 @@ onUnmounted(() => {
       </div>
     </main>
     
-    <AIMusicDirectorPanel 
-      v-if="isDriving"
-      :driving-state="drivingData.state"
-      :energy="drivingData.energy"
-      :tempo="drivingData.tempo"
-      :is-driving="isDriving"
-    />
-    
     <JourneyTimeline 
+      v-if="isDriving"
       :is-driving="isDriving"
       :driving-time="drivingData.time"
     />

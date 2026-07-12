@@ -1,11 +1,27 @@
 import { pipeline } from '@xenova/transformers'
 
+export type AIProvider = 'xenova' | 'openai-compatible'
 export type AIStatus = 'idle' | 'loading' | 'ready' | 'error'
 
 export interface AIResponse<T> {
   data: T | null
   error: string | null
-  loading: boolean
+  source: 'ai' | 'fallback'
+  provider?: AIProvider
+}
+
+export interface AIConfig {
+  provider: AIProvider
+  baseURL?: string
+  apiKey?: string
+  model?: string
+}
+
+const config: AIConfig = {
+  provider: (import.meta.env.VITE_AI_PROVIDER as AIProvider) || 'xenova',
+  baseURL: import.meta.env.VITE_AI_BASE_URL,
+  apiKey: import.meta.env.VITE_AI_API_KEY,
+  model: import.meta.env.VITE_AI_MODEL || 'Xenova/phi-2'
 }
 
 let textGenerator: any = null
@@ -19,6 +35,10 @@ export const getAIStatus = (): AIStatus => {
   return 'error'
 }
 
+export const getAIConfig = (): AIConfig => {
+  return { ...config }
+}
+
 export const initializeAI = async (): Promise<void> => {
   if (textGenerator) return
   if (isInitializing) {
@@ -29,9 +49,13 @@ export const initializeAI = async (): Promise<void> => {
   isInitializing = true
   initPromise = new Promise(async (resolve, reject) => {
     try {
-      textGenerator = await pipeline('text-generation', 'Xenova/phi-2', {
-        quantized: true
-      })
+      if (config.provider === 'openai-compatible' && config.apiKey) {
+        textGenerator = await createOpenAICompatibleGenerator()
+      } else {
+        textGenerator = await pipeline('text-generation', config.model, {
+          quantized: true
+        })
+      }
       isInitializing = false
       resolve()
     } catch (error) {
@@ -42,6 +66,31 @@ export const initializeAI = async (): Promise<void> => {
   })
   
   return initPromise
+}
+
+const createOpenAICompatibleGenerator = async (): Promise<any> => {
+  return {
+    async generate(prompt: string, options: { max_new_tokens: number }) {
+      const response = await fetch(`${config.baseURL}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${config.apiKey}`
+        },
+        body: JSON.stringify({
+          model: config.model,
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: options.max_new_tokens,
+          temperature: 0.7
+        })
+      })
+      
+      const data = await response.json()
+      return [{
+        generated_text: prompt + (data.choices?.[0]?.message?.content || '')
+      }]
+    }
+  }
 }
 
 export const generateText = async (prompt: string, maxRetries = 3): Promise<AIResponse<string>> => {
@@ -55,7 +104,8 @@ export const generateText = async (prompt: string, maxRetries = 3): Promise<AIRe
         return {
           data: null,
           error: 'AI model not initialized',
-          loading: false
+          source: 'fallback',
+          provider: config.provider
         }
       }
       
@@ -71,14 +121,16 @@ export const generateText = async (prompt: string, maxRetries = 3): Promise<AIRe
         return {
           data: text.replace(prompt, '').trim(),
           error: null,
-          loading: false
+          source: 'ai',
+          provider: config.provider
         }
       }
       
       return {
         data: null,
         error: 'Empty response',
-        loading: false
+        source: 'fallback',
+        provider: config.provider
       }
     } catch (error) {
       console.error(`AI generation attempt ${retry + 1} failed:`, error)
@@ -86,7 +138,8 @@ export const generateText = async (prompt: string, maxRetries = 3): Promise<AIRe
         return {
           data: null,
           error: error instanceof Error ? error.message : 'Unknown error',
-          loading: false
+          source: 'fallback',
+          provider: config.provider
         }
       }
       await delay(1000 * (retry + 1))
@@ -96,7 +149,8 @@ export const generateText = async (prompt: string, maxRetries = 3): Promise<AIRe
   return {
     data: null,
     error: 'Max retries exceeded',
-    loading: false
+    source: 'fallback',
+    provider: config.provider
   }
 }
 
@@ -107,7 +161,8 @@ export const generateJSON = async <T>(prompt: string, maxRetries = 3): Promise<A
     return {
       data: null,
       error: response.error,
-      loading: false
+      source: 'fallback',
+      provider: response.provider
     }
   }
   
@@ -118,7 +173,8 @@ export const generateJSON = async <T>(prompt: string, maxRetries = 3): Promise<A
       return {
         data: jsonData as T,
         error: null,
-        loading: false
+        source: 'ai',
+        provider: response.provider
       }
     }
     
@@ -126,7 +182,8 @@ export const generateJSON = async <T>(prompt: string, maxRetries = 3): Promise<A
     return {
       data: jsonData as T,
       error: null,
-      loading: false
+      source: 'ai',
+      provider: response.provider
     }
   } catch (parseError) {
     console.error('JSON parsing failed:', parseError)
@@ -136,7 +193,8 @@ export const generateJSON = async <T>(prompt: string, maxRetries = 3): Promise<A
     return {
       data: null,
       error: 'Failed to parse JSON response',
-      loading: false
+      source: 'fallback',
+      provider: response.provider
     }
   }
 }
