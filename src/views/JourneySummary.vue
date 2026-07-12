@@ -1,0 +1,417 @@
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { Trophy, Clock, Music, Zap, Star, RotateCcw, Home, Heart, Target, Activity, TrendingUp } from 'lucide-vue-next'
+import VChart from 'vue-echarts'
+import { use } from 'echarts/core'
+import { CanvasRenderer } from 'echarts/renderers'
+import { LineChart } from 'echarts/charts'
+import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
+import { summaryData as mockSummary, generateEnergyData, generateTempoData, generateSpeedData } from '@/mock/data'
+
+use([CanvasRenderer, LineChart, GridComponent, TooltipComponent, LegendComponent])
+
+const router = useRouter()
+const isLoaded = ref(false)
+
+const summaryData = ref({
+  drivingTime: mockSummary.drivingTime,
+  musicSegments: mockSummary.musicSegments,
+  averageEnergy: mockSummary.averageEnergy,
+  drivingStyle: mockSummary.drivingStyle,
+  journeyScore: mockSummary.journeyScore,
+  musicContinuity: mockSummary.musicContinuity,
+  predictionAccuracy: mockSummary.predictionAccuracy,
+  journeyEmotion: mockSummary.journeyEmotion
+})
+
+const energyData = ref(generateEnergyData())
+const tempoData = ref(generateTempoData())
+const speedData = ref(generateSpeedData())
+
+onMounted(() => {
+  setTimeout(() => {
+    isLoaded.value = true
+  }, 300)
+})
+
+const formatTime = (seconds: number) => {
+  const mins = Math.floor(seconds / 60)
+  const secs = Math.floor(seconds % 60)
+  return `${mins} min ${secs} sec`
+}
+
+const drivingStyleConfig = computed(() => {
+  const configs = {
+    smooth: { label: 'Smooth Operator', description: 'Consistent and relaxed driving', color: '#10b981', stars: 4 },
+    dynamic: { label: 'Dynamic Driver', description: 'Varied driving style with energy', color: '#8b5cf6', stars: 5 },
+    aggressive: { label: 'Aggressive Driver', description: 'Fast and intense driving style', color: '#ef4444', stars: 3 },
+    balanced: { label: 'Balanced Driver', description: 'Perfect mix of smooth and dynamic', color: '#06b6d4', stars: 5 }
+  }
+  return configs[summaryData.value.drivingStyle]
+})
+
+const emotionColor = computed(() => {
+  const colors: Record<string, string> = {
+    'Energetic': '#f59e0b',
+    'Relaxed': '#10b981',
+    'Adventurous': '#ef4444',
+    'Calm': '#3b82f6'
+  }
+  return colors[summaryData.value.journeyEmotion] || '#8b5cf6'
+})
+
+const goHome = () => {
+  router.push('/')
+}
+
+const startOver = () => {
+  router.push('/planner')
+}
+
+const viewFinalVision = () => {
+  router.push('/final-vision')
+}
+
+const generateChartOption = (data: number[], color: string, title: string) => ({
+  backgroundColor: 'transparent',
+  grid: {
+    top: 20,
+    right: 20,
+    bottom: 20,
+    left: 50
+  },
+  tooltip: {
+    trigger: 'axis',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    textStyle: { color: '#fff' }
+  },
+  xAxis: {
+    type: 'category',
+    data: data.map((_, i) => `T${i + 1}`),
+    axisLine: { lineStyle: { color: 'rgba(255,255,255,0.2)' } },
+    axisLabel: { color: 'rgba(255,255,255,0.5)', fontSize: 10 }
+  },
+  yAxis: {
+    type: 'value',
+    axisLine: { lineStyle: { color: 'rgba(255,255,255,0.2)' } },
+    axisLabel: { color: 'rgba(255,255,255,0.5)', fontSize: 10 },
+    splitLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } }
+  },
+  series: [{
+    name: title,
+    type: 'line',
+    data,
+    smooth: true,
+    symbol: 'circle',
+    symbolSize: 6,
+    lineStyle: { color, width: 2 },
+    itemStyle: { color },
+    areaStyle: {
+      color: {
+        type: 'linear',
+        x: 0, y: 0, x2: 0, y2: 1,
+        colorStops: [
+          { offset: 0, color: `${color}40` },
+          { offset: 1, color: `${color}05` }
+        ]
+      }
+    }
+  }]
+})
+
+const energyChartOption = computed(() => generateChartOption(energyData.value, '#f59e0b', 'Energy'))
+const tempoChartOption = computed(() => generateChartOption(tempoData.value, '#8b5cf6', 'Tempo'))
+const speedChartOption = computed(() => generateChartOption(speedData.value, '#06b6d4', 'Speed'))
+</script>
+
+<template>
+  <div class="min-h-screen relative overflow-hidden">
+    <div class="absolute inset-0 bg-gradient-to-br from-dark via-dark-light to-accent/20"></div>
+    
+    <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl"></div>
+    <div class="absolute bottom-1/4 right-1/4 w-80 h-80 bg-secondary/20 rounded-full blur-3xl"></div>
+    
+    <nav class="relative z-10 flex items-center justify-between px-8 py-6">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+          <Trophy class="w-6 h-6 text-white" />
+        </div>
+        <span class="text-xl font-bold text-white">Journey Summary</span>
+      </div>
+    </nav>
+    
+    <main class="relative z-10 px-4 py-8 max-w-6xl mx-auto">
+      <div 
+        class="text-center mb-12"
+        :class="{ 'animate-fade-in-up': isLoaded, 'opacity-0': !isLoaded }"
+      >
+        <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-primary to-accent mb-6 shadow-glow">
+          <Trophy class="w-10 h-10 text-white" />
+        </div>
+        <h1 class="text-4xl font-bold text-white mb-4">Journey Completed</h1>
+        <p class="text-white/60 text-lg">Your AI-powered driving experience has ended</p>
+        
+        <div class="mt-6 inline-flex items-center gap-3 px-6 py-3 glass-card rounded-full">
+          <Target class="w-5 h-5 text-primary" />
+          <span class="text-white">Journey Score</span>
+          <span class="text-3xl font-bold text-primary">{{ summaryData.journeyScore }}</span>
+        </div>
+      </div>
+      
+      <div 
+        class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"
+      >
+        <div 
+          class="glass-card p-6"
+          :class="{ 'animate-slide-in-right': isLoaded, 'opacity-0': !isLoaded }"
+        >
+          <div class="flex items-center gap-4 mb-4">
+            <div class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
+              <Clock class="w-6 h-6 text-primary" />
+            </div>
+            <div>
+              <h3 class="text-white font-semibold">Driving Time</h3>
+              <p class="text-white/50 text-sm">Total journey duration</p>
+            </div>
+          </div>
+          <div class="text-center py-4">
+            <span class="text-5xl font-bold text-white font-mono">{{ formatTime(summaryData.drivingTime) }}</span>
+          </div>
+        </div>
+        
+        <div 
+          class="glass-card p-6"
+          :class="{ 'animate-slide-in-right': isLoaded, 'opacity-0': !isLoaded }"
+          style="animation-delay: 0.1s"
+        >
+          <div class="flex items-center gap-4 mb-4">
+            <div class="w-12 h-12 rounded-xl bg-secondary/20 flex items-center justify-center">
+              <Music class="w-6 h-6 text-secondary" />
+            </div>
+            <div>
+              <h3 class="text-white font-semibold">Music Segments</h3>
+              <p class="text-white/50 text-sm">AI-generated soundtracks</p>
+            </div>
+          </div>
+          <div class="text-center py-4">
+            <span class="text-5xl font-bold text-white font-mono">18</span>
+            <span class="text-white/50 text-xl ml-2">tracks</span>
+          </div>
+        </div>
+        
+        <div 
+          class="glass-card p-6"
+          :class="{ 'animate-slide-in-right': isLoaded, 'opacity-0': !isLoaded }"
+          style="animation-delay: 0.2s"
+        >
+          <div class="flex items-center gap-4 mb-4">
+            <div class="w-12 h-12 rounded-xl bg-yellow-500/20 flex items-center justify-center">
+              <Zap class="w-6 h-6 text-yellow-400" />
+            </div>
+            <div>
+              <h3 class="text-white font-semibold">Average Energy</h3>
+              <p class="text-white/50 text-sm">Overall driving intensity</p>
+            </div>
+          </div>
+          <div class="text-center py-4">
+            <span class="text-5xl font-bold text-white font-mono">{{ summaryData.averageEnergy }}</span>
+            <span class="text-white/50 text-xl ml-2">%</span>
+          </div>
+          <div class="h-3 bg-white/10 rounded-full overflow-hidden mt-4">
+            <div 
+              class="h-full rounded-full bg-gradient-to-r from-green-400 via-yellow-400 to-red-400"
+              :style="{ width: `${summaryData.averageEnergy}%` }"
+            ></div>
+          </div>
+        </div>
+        
+        <div 
+          class="glass-card p-6"
+          :class="{ 'animate-slide-in-right': isLoaded, 'opacity-0': !isLoaded }"
+          style="animation-delay: 0.3s"
+        >
+          <div class="flex items-center gap-4 mb-4">
+            <div class="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center">
+              <Activity class="w-6 h-6 text-green-400" />
+            </div>
+            <div>
+              <h3 class="text-white font-semibold">Music Continuity</h3>
+              <p class="text-white/50 text-sm">Seamless transitions</p>
+            </div>
+          </div>
+          <div class="text-center py-4">
+            <span class="text-5xl font-bold text-green-400 font-mono">{{ summaryData.musicContinuity }}</span>
+            <span class="text-white/50 text-xl ml-2">%</span>
+          </div>
+        </div>
+        
+        <div 
+          class="glass-card p-6"
+          :class="{ 'animate-slide-in-right': isLoaded, 'opacity-0': !isLoaded }"
+          style="animation-delay: 0.4s"
+        >
+          <div class="flex items-center gap-4 mb-4">
+            <div class="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
+              <Target class="w-6 h-6 text-blue-400" />
+            </div>
+            <div>
+              <h3 class="text-white font-semibold">Prediction Accuracy</h3>
+              <p class="text-white/50 text-sm">AI forecast precision</p>
+            </div>
+          </div>
+          <div class="text-center py-4">
+            <span class="text-5xl font-bold text-blue-400 font-mono">{{ summaryData.predictionAccuracy }}</span>
+            <span class="text-white/50 text-xl ml-2">%</span>
+          </div>
+        </div>
+        
+        <div 
+          class="glass-card p-6"
+          :class="{ 'animate-slide-in-right': isLoaded, 'opacity-0': !isLoaded }"
+          style="animation-delay: 0.5s"
+        >
+          <div class="flex items-center gap-4 mb-4">
+            <div 
+              class="w-12 h-12 rounded-xl flex items-center justify-center"
+              :style="{ background: `${emotionColor}20` }"
+            >
+              <Heart class="w-6 h-6" :style="{ color: emotionColor }" />
+            </div>
+            <div>
+              <h3 class="text-white font-semibold">Journey Emotion</h3>
+              <p class="text-white/50 text-sm">Overall mood</p>
+            </div>
+          </div>
+          <div class="text-center py-4">
+            <span 
+              class="text-2xl font-bold"
+              :style="{ color: emotionColor }"
+            >
+              {{ summaryData.journeyEmotion }}
+            </span>
+          </div>
+        </div>
+      </div>
+      
+      <div 
+        class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8"
+      >
+        <div 
+          class="glass-card p-6"
+          :class="{ 'animate-scale-in': isLoaded, 'opacity-0': !isLoaded }"
+          style="animation-delay: 0.6s"
+        >
+          <h3 class="text-white font-semibold mb-4 flex items-center gap-3">
+            <Zap class="w-5 h-5 text-yellow-400" />
+            Energy Curve
+          </h3>
+          <div class="h-48">
+            <v-chart :option="energyChartOption" class="w-full h-full" autoresize />
+          </div>
+        </div>
+        
+        <div 
+          class="glass-card p-6"
+          :class="{ 'animate-scale-in': isLoaded, 'opacity-0': !isLoaded }"
+          style="animation-delay: 0.7s"
+        >
+          <h3 class="text-white font-semibold mb-4 flex items-center gap-3">
+            <Music class="w-5 h-5 text-primary" />
+            Tempo Curve
+          </h3>
+          <div class="h-48">
+            <v-chart :option="tempoChartOption" class="w-full h-full" autoresize />
+          </div>
+        </div>
+        
+        <div 
+          class="glass-card p-6"
+          :class="{ 'animate-scale-in': isLoaded, 'opacity-0': !isLoaded }"
+          style="animation-delay: 0.8s"
+        >
+          <h3 class="text-white font-semibold mb-4 flex items-center gap-3">
+            <TrendingUp class="w-5 h-5 text-secondary" />
+            Driving Speed
+          </h3>
+          <div class="h-48">
+            <v-chart :option="speedChartOption" class="w-full h-full" autoresize />
+          </div>
+        </div>
+      </div>
+      
+      <div 
+        class="glass-card p-6"
+        :class="{ 'animate-slide-in-right': isLoaded, 'opacity-0': !isLoaded }"
+        style="animation-delay: 0.9s"
+      >
+        <div class="flex items-center gap-4 mb-4">
+          <div 
+            class="w-12 h-12 rounded-xl flex items-center justify-center"
+            :style="{ background: `${drivingStyleConfig.color}20` }"
+          >
+            <Star class="w-6 h-6" :style="{ color: drivingStyleConfig.color }" />
+          </div>
+          <div>
+            <h3 class="text-white font-semibold">Driver Style</h3>
+            <p class="text-white/50 text-sm">Your driving personality</p>
+          </div>
+        </div>
+        <div class="flex items-center justify-between">
+          <div>
+            <span 
+              class="text-3xl font-bold"
+              :style="{ color: drivingStyleConfig.color }"
+            >
+              {{ drivingStyleConfig.label }}
+            </span>
+            <p class="text-white/50 mt-1">{{ drivingStyleConfig.description }}</p>
+          </div>
+          <div class="flex items-center gap-1">
+            <Star 
+              v-for="i in 5" 
+              :key="i"
+              class="w-8 h-8"
+              :class="i <= drivingStyleConfig.stars ? 'fill-yellow-400 text-yellow-400' : 'text-white/30'"
+            />
+          </div>
+        </div>
+      </div>
+      
+      <div 
+        class="flex flex-col sm:flex-row items-center justify-center gap-4 mt-8"
+        :class="{ 'animate-scale-in': isLoaded, 'opacity-0': !isLoaded }"
+        style="animation-delay: 1s"
+      >
+        <button 
+          @click="startOver"
+          class="glass-button flex items-center gap-3"
+        >
+          <RotateCcw class="w-5 h-5" />
+          <span>Start New Journey</span>
+        </button>
+        
+        <button 
+          @click="viewFinalVision"
+          class="px-8 py-3 bg-gradient-to-r from-primary to-secondary text-white font-semibold rounded-full transition-all duration-300 hover:shadow-lg hover:shadow-primary/30 flex items-center gap-3"
+        >
+          <Trophy class="w-5 h-5" />
+          <span>The Future of Driving Sound</span>
+        </button>
+        
+        <button 
+          @click="goHome"
+          class="px-8 py-3 bg-white/10 border border-white/20 rounded-full text-white font-semibold transition-all duration-300 hover:bg-white/20 flex items-center gap-3"
+        >
+          <Home class="w-5 h-5" />
+          <span>Return Home</span>
+        </button>
+      </div>
+    </main>
+    
+    <footer class="relative z-10 text-center py-8 text-white/40 text-sm">
+      <p>DriveScore AI - Future Mobility Experience</p>
+    </footer>
+  </div>
+</template>

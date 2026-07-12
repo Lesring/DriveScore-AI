@@ -1,0 +1,29 @@
+{
+  "name": "drivescore",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@xenova/transformers": "^2.17.2",
+    "echarts": "^6.1.0",
+    "lucide-vue-next": "^0.324.0",
+    "vue": "^3.5.2",
+    "vue-echarts": "^8.0.1",
+    "vue-router": "^4.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@vitejs/plugin-vue": "^5.1.2",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.41",
+    "tailwindcss": "^3.4.10",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.0",
+    "vue-tsc": "^2.1.4"
+  }
+}
