@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { onUnmounted } from 'vue'
+import { onMounted, onUnmounted, watch, computed } from 'vue'
 import { Play, Pause, Gauge, Zap, Music, Navigation, Activity, Brain, Loader2 } from 'lucide-vue-next'
 import { useDrivingSimulation } from '@/composables/useDrivingSimulation'
 import { useJourneySession } from '@/composables/useJourneySession'
+import { usePresentationMode } from '@/composables/usePresentationMode'
+import { useRoadSimulator } from '@/composables/useRoadSimulator'
 import JourneyTimeline from '@/components/JourneyTimeline.vue'
 import AIExplainBox from '@/components/AIExplainBox.vue'
 import PredictionPanel from '@/components/PredictionPanel.vue'
@@ -30,13 +32,70 @@ const {
 
 const { session } = useJourneySession()
 
+const { isPresenting, setAutoDriving } = usePresentationMode()
+const { triggerEvent } = useRoadSimulator()
+
+const predictionConfidence = computed(() => {
+  if (!currentPrediction.value) return null
+  return currentPrediction.value.confidence
+})
+
+const averageSpeed = computed(() => {
+  if (session.drivingStats.length === 0) return null
+  const total = session.drivingStats.reduce((sum, stat) => sum + stat.speed, 0)
+  return Math.round(total / session.drivingStats.length)
+})
+
+const maxSpeed = computed(() => {
+  if (session.drivingStats.length === 0) return null
+  return Math.max(...session.drivingStats.map(stat => stat.speed))
+})
+
+let roadEventTriggered = false
+let autoStartTimer: number | null = null
+let roadEventTimer: number | null = null
+
+const handleAutoStart = () => {
+  if (isPresenting.value && !isDriving.value) {
+    autoStartTimer = window.setTimeout(() => {
+      startDriving()
+      setAutoDriving(true)
+      
+      roadEventTimer = window.setTimeout(() => {
+        if (isDriving.value && !roadEventTriggered) {
+          triggerEvent('rain')
+          roadEventTriggered = true
+        }
+      }, 8000)
+    }, 2000)
+  }
+}
+
+watch(isPresenting, (newVal) => {
+  if (newVal) {
+    handleAutoStart()
+  }
+})
+
+onMounted(() => {
+  handleAutoStart()
+})
+
 onUnmounted(() => {
+  if (autoStartTimer) {
+    clearTimeout(autoStartTimer)
+    autoStartTimer = null
+  }
+  if (roadEventTimer) {
+    clearTimeout(roadEventTimer)
+    roadEventTimer = null
+  }
   stop()
 })
 </script>
 
 <template>
-  <div class="min-h-screen relative overflow-hidden bg-dark">
+  <div class="min-h-screen relative overflow-hidden bg-dark" data-highlight="driving">
     <div 
       class="absolute inset-0 transition-colors duration-1000"
       :style="{
@@ -316,16 +375,16 @@ onUnmounted(() => {
                   <div class="text-white text-2xl font-bold">{{ Math.round(drivingData.tempo) }} BPM</div>
                 </div>
                 
-                <div>
+                <div v-if="predictionConfidence !== null">
                   <div class="text-white/60 text-sm mb-2">Prediction Confidence</div>
                   <div class="flex items-center gap-3">
                     <div class="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
                       <div 
                         class="h-full bg-gradient-to-r from-green-400 to-blue-400 rounded-full transition-all duration-500"
-                        :style="{ width: '95%' }"
+                        :style="{ width: `${predictionConfidence}%` }"
                       ></div>
                     </div>
-                    <span class="text-white font-mono text-sm">95%</span>
+                    <span class="text-white font-mono text-sm">{{ predictionConfidence }}%</span>
                   </div>
                 </div>
               </div>
@@ -403,13 +462,13 @@ onUnmounted(() => {
                     <span class="text-white/50">Current</span>
                     <span class="text-white font-mono">{{ Math.round(drivingData.speed) }} km/h</span>
                   </div>
-                  <div class="flex justify-between items-center">
+                  <div v-if="averageSpeed !== null" class="flex justify-between items-center">
                     <span class="text-white/50">Average</span>
-                    <span class="text-white font-mono">65 km/h</span>
+                    <span class="text-white font-mono">{{ averageSpeed }} km/h</span>
                   </div>
-                  <div class="flex justify-between items-center">
+                  <div v-if="maxSpeed !== null" class="flex justify-between items-center">
                     <span class="text-white/50">Max</span>
-                    <span class="text-white font-mono">142 km/h</span>
+                    <span class="text-white font-mono">{{ maxSpeed }} km/h</span>
                   </div>
                 </div>
               </div>

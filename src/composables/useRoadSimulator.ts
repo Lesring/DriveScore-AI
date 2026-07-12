@@ -2,6 +2,7 @@ import { reactive } from 'vue';
 import { analyzeRoute, generateMusic, predict, type RouteAnalysis, type MusicGeneration, type Prediction, type AnalyzeRouteRequest } from '@/api';
 import { audioManager, type AudioSource } from '@/audio/AudioManager';
 import { useJourneySession, type RerouteEvent } from '@/composables/useJourneySession';
+import type { DrivingState } from '@/types';
 
 export type RoadEvent = 'rain' | 'night' | 'traffic' | 'construction' | 'accident' | 'mountain' | 'highway';
 export type RoadAction = RoadEvent | 'clear';
@@ -22,28 +23,83 @@ export interface SimulationState {
   currentMusic: MusicGeneration | null;
   currentPrediction: Prediction | null;
   roadState: RoadState;
+  reroutingMessage: string;
 }
 
-const EVENT_EXPLANATIONS: Record<RoadAction, string> = {
-  rain: '检测到降雨，正在降低能量并切换到更稳定的节奏以保持专注',
-  night: '进入夜间驾驶模式，切换到舒缓的氛围音乐以减少疲劳',
-  traffic: '检测到交通拥堵，正在降低节奏以帮助保持耐心',
-  construction: '前方施工区域，切换到谨慎驾驶模式和稳定的背景音乐',
-  accident: '检测到事故，立即降低所有参数，切换到最安全的驾驶状态',
-  mountain: '进入山区道路，增加能量以应对复杂路况挑战',
-  highway: '进入高速公路，提升能量和节奏以匹配巡航状态',
-  clear: '所有路况已恢复正常，正在恢复到标准驾驶模式'
-};
+export interface RoadEventMapping {
+  speed: number;
+  energy: number;
+  tempo: number;
+  state: DrivingState;
+  musicStyle: string;
+  explanation: string;
+}
 
-const EVENT_PARAMETERS: Record<RoadAction, { speed: number; energy: number; tempo: number; state: string }> = {
-  rain: { speed: 60, energy: 40, tempo: 85, state: 'city' },
-  night: { speed: 70, energy: 35, tempo: 80, state: 'cruise' },
-  traffic: { speed: 30, energy: 30, tempo: 70, state: 'city' },
-  construction: { speed: 40, energy: 35, tempo: 75, state: 'city' },
-  accident: { speed: 20, energy: 25, tempo: 65, state: 'decelerating' },
-  mountain: { speed: 50, energy: 65, tempo: 105, state: 'city' },
-  highway: { speed: 120, energy: 80, tempo: 130, state: 'highway' },
-  clear: { speed: 80, energy: 60, tempo: 100, state: 'cruise' }
+export const ROAD_EVENT_MAPPING: Record<RoadAction, RoadEventMapping> = {
+  rain: {
+    speed: 60,
+    energy: 40,
+    tempo: 85,
+    state: 'city',
+    musicStyle: 'Calm',
+    explanation: 'AI is rethinking rhythm for rain - switching to calm, steady music'
+  },
+  night: {
+    speed: 70,
+    energy: 35,
+    tempo: 80,
+    state: 'cruise',
+    musicStyle: 'Calm',
+    explanation: 'AI adapting to night driving - playing soothing ambient music'
+  },
+  traffic: {
+    speed: 30,
+    energy: 30,
+    tempo: 70,
+    state: 'city',
+    musicStyle: 'Build',
+    explanation: 'AI responding to traffic - slowing tempo to help maintain patience'
+  },
+  construction: {
+    speed: 40,
+    energy: 35,
+    tempo: 75,
+    state: 'city',
+    musicStyle: 'Build',
+    explanation: 'AI detecting construction - switching to cautious driving mode'
+  },
+  accident: {
+    speed: 20,
+    energy: 25,
+    tempo: 65,
+    state: 'decelerating',
+    musicStyle: 'Ending',
+    explanation: 'Emergency detected - reducing all parameters for safety'
+  },
+  mountain: {
+    speed: 50,
+    energy: 65,
+    tempo: 105,
+    state: 'city',
+    musicStyle: 'Peak',
+    explanation: 'AI entering mountain terrain - increasing energy for the challenge'
+  },
+  highway: {
+    speed: 120,
+    energy: 80,
+    tempo: 130,
+    state: 'highway',
+    musicStyle: 'Cruise',
+    explanation: 'AI entering highway - boosting energy and tempo for cruising'
+  },
+  clear: {
+    speed: 80,
+    energy: 60,
+    tempo: 100,
+    state: 'cruise',
+    musicStyle: 'Cruise',
+    explanation: 'All conditions cleared - returning to standard driving mode'
+  }
 };
 
 export function useRoadSimulator() {
@@ -71,7 +127,8 @@ export function useRoadSimulator() {
       accident: false,
       mountain: false,
       highway: false
-    }
+    },
+    reroutingMessage: ''
   });
 
   const triggerEvent = async (event: RoadAction) => {
@@ -83,11 +140,13 @@ export function useRoadSimulator() {
     
     const eventName = event === 'clear' ? 'Cleared all events' : `${event.charAt(0).toUpperCase() + event.slice(1)}`;
     setLastRerouteEvent(eventName);
+    simulationState.reroutingMessage = ROAD_EVENT_MAPPING[event].explanation;
 
     await updateRoadState(event);
     await reroute(event);
 
     simulationState.isRerouting = false;
+    simulationState.reroutingMessage = '';
     finishRerouting();
   };
 
@@ -104,7 +163,9 @@ export function useRoadSimulator() {
 
   const reroute = async (event: RoadAction) => {
     try {
-      updateReroutingStep('Analyzing road event...', 10);
+      const mapping = ROAD_EVENT_MAPPING[event];
+      
+      updateReroutingStep(mapping.explanation, 10);
 
       const weather = getWeather();
       const roadType = getRoadType();
@@ -128,17 +189,22 @@ export function useRoadSimulator() {
       const music = musicResult.data!;
       simulationState.currentMusic = music;
 
-      const isAIAnalysis = analysis.steps.length > 0 && analysis.steps[0].reason !== undefined;
-      
-      if (isAIAnalysis) {
-        completeReroute(analysis, music);
-      }
+      completeReroute(analysis, music);
+
+      updateReroutingStep('Preloading music segments...', 60);
+      const sources: AudioSource[] = music.segments.map(segment => ({
+        id: segment.id,
+        type: segment.audioUrl ? 'url' : 'synthesized',
+        url: segment.audioUrl,
+        segment
+      }));
+      await audioManager.preload(sources);
 
       updateReroutingStep('Updating prediction...', 70);
       const predictionResult = await predict({
-        currentState: roadType.toLowerCase(),
+        currentState: mapping.state,
         time: 10,
-        currentSpeed: EVENT_PARAMETERS[event].speed,
+        currentSpeed: mapping.speed,
         currentRoad: roadType,
         nextRoad: roadType
       });
@@ -148,13 +214,11 @@ export function useRoadSimulator() {
 
       updateReroutingStep('Applying audio changes...', 85);
 
-      const params = EVENT_PARAMETERS[event];
-      audioManager.setEnergy(params.energy);
-      audioManager.setTempo(params.tempo);
+      audioManager.setEnergy(mapping.energy);
+      audioManager.setTempo(mapping.tempo);
 
       if (music.segments.length > 0) {
-        const targetStyle = getStyleForEvent(event);
-        const targetSegment = music.segments.find(s => s.style.toLowerCase() === targetStyle.toLowerCase()) || music.segments[0];
+        const targetSegment = music.segments.find(s => s.style.toLowerCase() === mapping.musicStyle.toLowerCase()) || music.segments[0];
         
         const audioSource: AudioSource = {
           id: targetSegment.id,
@@ -170,10 +234,10 @@ export function useRoadSimulator() {
         analysis,
         music,
         prediction,
-        explanation: EVENT_EXPLANATIONS[event],
-        targetSpeed: params.speed,
-        targetEnergy: params.energy,
-        targetTempo: params.tempo,
+        explanation: mapping.explanation,
+        targetSpeed: mapping.speed,
+        targetEnergy: mapping.energy,
+        targetTempo: mapping.tempo,
         roadType
       };
       
@@ -185,26 +249,6 @@ export function useRoadSimulator() {
       console.error('Rerouting failed:', error);
       updateReroutingStep('Error occurred, using fallback...', 100);
       setAIStatus('fallback');
-    }
-  };
-
-  const getStyleForEvent = (event: RoadAction): string => {
-    switch (event) {
-      case 'rain':
-      case 'night':
-        return 'Calm';
-      case 'traffic':
-      case 'construction':
-        return 'Build';
-      case 'accident':
-        return 'Ending';
-      case 'mountain':
-        return 'Peak';
-      case 'highway':
-        return 'Cruise';
-      case 'clear':
-      default:
-        return 'Cruise';
     }
   };
 

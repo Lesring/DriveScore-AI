@@ -2,16 +2,17 @@ import { ref, computed, watch, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import type { DrivingState, DrivingData } from '@/types'
 import { stateTransitions, stateConfigs } from '@/mock/data'
-import { predict, type Prediction, type MusicSegment } from '@/api'
+import { predict, getAudioUrlForStyle, type Prediction, type MusicSegment } from '@/api'
 import { audioManager, type AudioSource } from '@/audio/AudioManager'
 import { useJourneySession } from '@/composables/useJourneySession'
+import { ROAD_EVENT_MAPPING, type RoadAction } from '@/composables/useRoadSimulator'
 
 const fallbackMusicSegments: MusicSegment[] = [
-  { id: 'Calm_01', style: 'Calm', energy: 25, tempo: 65, key: 'C Major', duration: 180, progress: 100, emotion: 'Relax', reason: 'Demo data - Urban driving requires calm music' },
-  { id: 'Build_01', style: 'Build', energy: 50, tempo: 95, key: 'A Minor', duration: 150, progress: 100, emotion: 'Building', reason: 'Demo data - Preparing for highway' },
-  { id: 'Cruise_02', style: 'Cruise', energy: 75, tempo: 125, key: 'F Major', duration: 240, progress: 100, emotion: 'Energetic', reason: 'Demo data - Highway cruising' },
-  { id: 'Peak_01', style: 'Peak', energy: 95, tempo: 145, key: 'D Minor', duration: 120, progress: 100, emotion: 'Intense', reason: 'Demo data - High speed peak' },
-  { id: 'Ending_01', style: 'Ending', energy: 35, tempo: 75, key: 'C Major', duration: 180, progress: 100, emotion: 'Peaceful', reason: 'Demo data - Arriving at destination' }
+  { id: 'Calm_01', style: 'Calm', energy: 25, tempo: 65, key: 'C Major', duration: 180, progress: 100, emotion: 'Relax', reason: 'Demo data - Urban driving requires calm music', audioUrl: getAudioUrlForStyle('Calm') },
+  { id: 'Build_01', style: 'Build', energy: 50, tempo: 95, key: 'A Minor', duration: 150, progress: 100, emotion: 'Building', reason: 'Demo data - Preparing for highway', audioUrl: getAudioUrlForStyle('Build') },
+  { id: 'Cruise_02', style: 'Cruise', energy: 75, tempo: 125, key: 'F Major', duration: 240, progress: 100, emotion: 'Energetic', reason: 'Demo data - Highway cruising', audioUrl: getAudioUrlForStyle('Cruise') },
+  { id: 'Peak_01', style: 'Peak', energy: 95, tempo: 145, key: 'D Minor', duration: 120, progress: 100, emotion: 'Intense', reason: 'Demo data - High speed peak', audioUrl: getAudioUrlForStyle('Peak') },
+  { id: 'Ending_01', style: 'Ending', energy: 35, tempo: 75, key: 'C Major', duration: 180, progress: 100, emotion: 'Peaceful', reason: 'Demo data - Arriving at destination', audioUrl: getAudioUrlForStyle('Ending') }
 ]
 
 export function useDrivingSimulation() {
@@ -174,13 +175,15 @@ export function useDrivingSimulation() {
     if (!session.lastRerouteResult || !isDriving.value) return
     
     const result = session.lastRerouteResult
+    const eventType = result.eventType as RoadAction
+    const mapping = ROAD_EVENT_MAPPING[eventType] || ROAD_EVENT_MAPPING.clear
+    
     applyOverride({
-      speed: result.targetSpeed || 60,
-      energy: result.targetEnergy || 50,
-      tempo: result.targetTempo || 100,
-      state: result.roadType?.toLowerCase() === 'highway' ? 'highway' : 
-             result.roadType?.toLowerCase() === 'mountain' ? 'city' : 'city',
-      musicStyle: getMusicSegmentForState(result.roadType?.toLowerCase() as DrivingState)?.style
+      speed: mapping.speed,
+      energy: mapping.energy,
+      tempo: mapping.tempo,
+      state: mapping.state,
+      musicStyle: mapping.musicStyle
     })
   }
 

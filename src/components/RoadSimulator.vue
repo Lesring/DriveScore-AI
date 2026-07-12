@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CloudRain, Moon, Car, Cone, AlertTriangle, Mountain, Zap, Sun, Brain } from 'lucide-vue-next'
+import { CloudRain, Moon, Car, Cone, AlertTriangle, Mountain, Zap, Sun, Brain, Play } from 'lucide-vue-next'
 import { useRoadSimulator } from '@/composables/useRoadSimulator'
 
 defineProps<{
@@ -28,7 +28,15 @@ const events: { id: 'rain' | 'night' | 'traffic' | 'construction' | 'accident' |
       <span class="text-white font-semibold">Road Simulator</span>
     </div>
     
-    <div class="space-y-4">
+    <div v-if="!isDriving" class="flex flex-col items-center justify-center py-6">
+      <div class="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center mb-3">
+        <Play class="w-6 h-6 text-white/50" />
+      </div>
+      <p class="text-white/50 text-sm text-center">Start driving first</p>
+      <p class="text-white/30 text-xs text-center mt-1">Events will become available</p>
+    </div>
+    
+    <div v-else class="space-y-4">
       <div class="grid grid-cols-2 gap-2">
         <button
           v-for="event in events"
@@ -39,7 +47,7 @@ const events: { id: 'rain' | 'night' | 'traffic' | 'construction' | 'accident' |
             'bg-white/20 scale-105 shadow-lg': simulationState.roadState[event.id],
             'bg-white/5 hover:bg-white/10': !simulationState.roadState[event.id]
           }"
-          :disabled="!isDriving || simulationState.isRerouting"
+          :disabled="simulationState.isRerouting"
         >
           <component 
             :is="event.icon" 
@@ -58,7 +66,7 @@ const events: { id: 'rain' | 'night' | 'traffic' | 'construction' | 'accident' |
       <button
         @click="clearAllEvents"
         class="w-full flex items-center justify-center gap-2 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-sm text-white/70"
-        :disabled="!isDriving || simulationState.isRerouting"
+        :disabled="simulationState.isRerouting"
       >
         <Sun class="w-4 h-4" />
         <span>Clear All</span>
