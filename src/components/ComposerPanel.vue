@@ -1,56 +1,40 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { Music, Loader2, Check } from 'lucide-vue-next'
-import { composerProgressData } from '@/mock/data'
+import { useJourneySession } from '@/composables/useJourneySession'
 
 const props = defineProps<{
   isVisible: boolean
-  analysisSource?: 'ai' | 'fallback'
-  musicSource?: 'ai' | 'fallback'
 }>()
 
 const emit = defineEmits<{
   (e: 'completed'): void
 }>()
 
-const isVisualizing = ref(true)
-const progress = ref<Record<string, number>>({})
-const completedSegments = ref<string[]>([])
+const { session } = useJourneySession()
 
-onMounted(() => {
-  if (props.isVisible) {
-    startVisualization()
-  }
-})
+const isVisualizing = ref(true)
+
+const musicSegments = computed(() => session.musicSegments)
+const musicSource = computed(() => session.musicSource)
+
+const segmentColors: Record<string, string> = {
+  Calm: '#d4c7b0',
+  Build: '#c9a962',
+  Cruise: '#dcc88a',
+  Peak: '#f5efe6',
+  Ending: '#b8a687'
+}
 
 watch(() => props.isVisible, (visible) => {
   if (visible) {
-    startVisualization()
+    isVisualizing.value = true
+    setTimeout(() => {
+      isVisualizing.value = false
+      emit('completed')
+    }, 1500)
   }
-})
-
-const startVisualization = async () => {
-  isVisualizing.value = true
-  progress.value = {}
-  completedSegments.value = []
-  
-  for (const segment of composerProgressData) {
-    progress.value[segment.id] = 0
-    
-    for (let i = 0; i <= segment.targetProgress; i += 2) {
-      await delay(30)
-      progress.value[segment.id] = i
-    }
-    
-    completedSegments.value.push(segment.id)
-    await delay(500)
-  }
-  
-  isVisualizing.value = false
-  emit('completed')
-}
-
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+}, { immediate: true })
 </script>
 
 <template>
@@ -59,7 +43,7 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
     class="glass-card p-6"
   >
     <div class="flex items-center justify-between mb-6">
-      <h3 class="text-white font-semibold flex items-center gap-2">
+      <h3 class="text-primary-theme font-semibold flex items-center gap-2">
         <Music class="w-5 h-5 text-primary" />
         Music Visualizer
       </h3>
@@ -71,59 +55,74 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
         />
         <Check v-else class="w-4 h-4 text-green-400" />
         <span :class="isVisualizing ? 'text-primary' : 'text-green-400'" class="text-sm">
-          {{ isVisualizing ? 'Visualizing cached result...' : 'Visualized' }}
+          {{ isVisualizing ? 'Visualizing result...' : 'Visualized' }}
         </span>
       </div>
     </div>
     
+    <div class="flex items-center gap-2 mb-6">
+      <span 
+        v-if="musicSource === 'ai'"
+        class="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400"
+      >
+        AI Generated
+      </span>
+      <span 
+        v-else-if="musicSource === 'fallback'"
+        class="text-xs px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400"
+      >
+        Fallback Demo Data
+      </span>
+      <span 
+        v-else
+        class="text-xs px-2 py-0.5 rounded-full bg-glass-bg text-muted-theme"
+      >
+        No Data
+      </span>
+    </div>
+    
     <div class="space-y-4">
       <div 
-        v-for="segment in composerProgressData" 
+        v-for="segment in musicSegments" 
         :key="segment.id"
-        class="p-3 bg-white/5 rounded-xl"
+        class="p-3 bg-glass-bg rounded-xl"
       >
         <div class="flex items-center justify-between mb-2">
           <div class="flex items-center gap-2">
-            <span class="text-white font-semibold">{{ segment.name }}</span>
+            <span class="text-primary-theme font-semibold">{{ segment.style }}</span>
             <span 
               class="text-xs px-2 py-0.5 rounded-full"
-              :style="{ background: `${segment.color}20`, color: segment.color }"
+              :style="{ background: `${segmentColors[segment.style] || '#8b5cf6'}20`, color: segmentColors[segment.style] || '#8b5cf6' }"
             >
-              {{ segment.style }}
-            </span>
-            <span 
-              v-if="musicSource === 'ai'"
-              class="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400"
-            >
-              AI Generated
-            </span>
-            <span 
-              v-else-if="musicSource === 'fallback'"
-              class="text-xs px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400"
-            >
-              Fallback Demo
+              {{ segment.key }}
             </span>
           </div>
-          <span class="text-white/60 text-sm">{{ progress[segment.id] || 0 }}%</span>
+          <span class="text-secondary-theme text-sm">Energy: {{ segment.energy }}%</span>
         </div>
         
-        <div class="h-2 bg-white/10 rounded-full overflow-hidden">
+        <div class="h-2 bg-glass-border rounded-full overflow-hidden">
           <div 
             class="h-full rounded-full transition-all duration-100"
             :style="{ 
-              width: `${progress[segment.id] || 0}%`,
-              background: segment.color
+              width: `${segment.progress || 100}%`,
+              background: segmentColors[segment.style] || '#8b5cf6'
             }"
           ></div>
         </div>
         
         <div 
-          v-if="completedSegments.includes(segment.id)"
           class="flex items-center gap-1 mt-2 text-green-400 text-xs"
         >
           <Check class="w-3 h-3" />
           <span>Ready</span>
         </div>
+      </div>
+      
+      <div 
+        v-if="musicSegments.length === 0"
+        class="p-4 bg-glass-bg rounded-xl text-center"
+      >
+        <p class="text-muted-theme text-sm">No music segments available</p>
       </div>
     </div>
     

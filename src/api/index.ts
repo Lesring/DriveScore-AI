@@ -106,15 +106,15 @@ const fallbackAnalyzeRoute = (request: AnalyzeRouteRequest): RouteAnalysis => ({
   ]
 })
 
-const getAudioUrlForStyle = (style: string): string => {
+export const getAudioUrlForStyle = (style: string): string => {
   const styleMap: Record<string, string> = {
-    'calm': '/music/Calm.mp3',
-    'build': '/music/Build.mp3',
-    'cruise': '/music/Cruise.mp3',
-    'peak': '/music/Peak.mp3',
-    'ending': '/music/Ending.mp3'
+    'calm': '/music/Calm.wav',
+    'build': '/music/Build.wav',
+    'cruise': '/music/Cruise.wav',
+    'peak': '/music/Peak.wav',
+    'ending': '/music/Ending.wav'
   }
-  return styleMap[style.toLowerCase()] || '/music/Calm.mp3'
+  return styleMap[style.toLowerCase()] || '/music/Calm.wav'
 }
 
 const fallbackGenerateMusic = (): MusicGeneration => ({
@@ -178,6 +178,11 @@ export const generateMusic = async (request: GenerateMusicRequest): Promise<APIR
   const response: AIResponse<MusicGeneration> = await generateJSON<MusicGeneration>(prompt, 2)
   
   if (response.data) {
+    response.data.segments.forEach(segment => {
+      if (!segment.audioUrl) {
+        segment.audioUrl = getAudioUrlForStyle(segment.style)
+      }
+    })
     return {
       data: response.data,
       error: response.error,

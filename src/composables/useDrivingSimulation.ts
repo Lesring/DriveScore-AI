@@ -6,6 +6,7 @@ import { predict, getAudioUrlForStyle, type Prediction, type MusicSegment } from
 import { audioManager, type AudioSource } from '@/audio/AudioManager'
 import { useJourneySession } from '@/composables/useJourneySession'
 import { ROAD_EVENT_MAPPING, type RoadAction } from '@/composables/useRoadSimulator'
+import { useStableAudio } from '@/composables/useStableAudio'
 
 const fallbackMusicSegments: MusicSegment[] = [
   { id: 'Calm_01', style: 'Calm', energy: 25, tempo: 65, key: 'C Major', duration: 180, progress: 100, emotion: 'Relax', reason: 'Demo data - Urban driving requires calm music', audioUrl: getAudioUrlForStyle('Calm') },
@@ -18,6 +19,7 @@ const fallbackMusicSegments: MusicSegment[] = [
 export function useDrivingSimulation() {
   const router = useRouter()
   const { session, addDrivingStat, addPrediction, subscribe } = useJourneySession()
+  const { generateForStyle, generateForEvent, getGeneratedForStyle, getGeneratedForEvent, hasApiKey, isGenerating } = useStableAudio()
   
   const isDriving = ref(false)
   const isPaused = ref(false)
@@ -112,11 +114,33 @@ export function useDrivingSimulation() {
     const segment = getMusicSegmentForState(state)
     if (!segment) return
 
-    const audioSource: AudioSource = {
-      id: segment.id,
-      type: segment.audioUrl ? 'url' : 'synthesized',
-      url: segment.audioUrl,
-      segment
+    let audioSource: AudioSource
+
+    if (hasApiKey.value) {
+      const generatedAudio = getGeneratedForStyle(segment.style)
+      if (generatedAudio) {
+        audioSource = {
+          id: `ai_${generatedAudio.id}`,
+          type: 'ai-generated',
+          url: generatedAudio.url,
+          segment,
+          aiGenerated: true
+        }
+      } else {
+        audioSource = {
+          id: segment.id,
+          type: segment.audioUrl ? 'url' : 'synthesized',
+          url: segment.audioUrl,
+          segment
+        }
+      }
+    } else {
+      audioSource = {
+        id: segment.id,
+        type: segment.audioUrl ? 'url' : 'synthesized',
+        url: segment.audioUrl,
+        segment
+      }
     }
 
     await audioManager.play(audioSource, { fadeIn: 1500, loop: true })
@@ -138,7 +162,7 @@ export function useDrivingSimulation() {
     audioManager.setTempo(drivingData.value.tempo)
   }
 
-  const applyOverride = async (target: { speed: number; energy: number; tempo: number; state: string; musicStyle?: string }) => {
+  const applyOverride = async (target: { speed: number; energy: number; tempo: number; state: string; musicStyle?: string; eventType?: string }) => {
     if (!isDriving.value) return
 
     isOverridden.value = true
@@ -150,12 +174,42 @@ export function useDrivingSimulation() {
     if (target.musicStyle) {
       const segment = getMusicSegmentForStyle(target.musicStyle)
       if (segment) {
-        const audioSource: AudioSource = {
-          id: segment.id,
-          type: segment.audioUrl ? 'url' : 'synthesized',
-          url: segment.audioUrl,
-          segment
+        let audioSource: AudioSource
+
+        if (hasApiKey.value) {
+          let generatedAudio = target.eventType 
+            ? getGeneratedForEvent(target.eventType) 
+            : getGeneratedForStyle(target.musicStyle)
+          
+          if (!generatedAudio) {
+            generatedAudio = getGeneratedForStyle(target.musicStyle)
+          }
+
+          if (generatedAudio) {
+            audioSource = {
+              id: `ai_${generatedAudio.id}`,
+              type: 'ai-generated',
+              url: generatedAudio.url,
+              segment,
+              aiGenerated: true
+            }
+          } else {
+            audioSource = {
+              id: segment.id,
+              type: segment.audioUrl ? 'url' : 'synthesized',
+              url: segment.audioUrl,
+              segment
+            }
+          }
+        } else {
+          audioSource = {
+            id: segment.id,
+            type: segment.audioUrl ? 'url' : 'synthesized',
+            url: segment.audioUrl,
+            segment
+          }
         }
+
         await audioManager.crossfadeTo(audioSource, 1000)
         currentMusicSegment.value = segment
       }
@@ -183,7 +237,8 @@ export function useDrivingSimulation() {
       energy: mapping.energy,
       tempo: mapping.tempo,
       state: mapping.state,
-      musicStyle: mapping.musicStyle
+      musicStyle: mapping.musicStyle,
+      eventType
     })
   }
 
@@ -255,12 +310,35 @@ export function useDrivingSimulation() {
 
       const predictedSegment = getMusicSegmentForStyle(prediction.expectedMusic)
       if (predictedSegment && predictedSegment.id !== currentMusicSegment.value?.id) {
-        const audioSource: AudioSource = {
-          id: predictedSegment.id,
-          type: predictedSegment.audioUrl ? 'url' : 'synthesized',
-          url: predictedSegment.audioUrl,
-          segment: predictedSegment
+        let audioSource: AudioSource
+
+        if (hasApiKey.value) {
+          const generatedAudio = getGeneratedForStyle(predictedSegment.style)
+          if (generatedAudio) {
+            audioSource = {
+              id: `ai_${generatedAudio.id}`,
+              type: 'ai-generated',
+              url: generatedAudio.url,
+              segment: predictedSegment,
+              aiGenerated: true
+            }
+          } else {
+            audioSource = {
+              id: predictedSegment.id,
+              type: predictedSegment.audioUrl ? 'url' : 'synthesized',
+              url: predictedSegment.audioUrl,
+              segment: predictedSegment
+            }
+          }
+        } else {
+          audioSource = {
+            id: predictedSegment.id,
+            type: predictedSegment.audioUrl ? 'url' : 'synthesized',
+            url: predictedSegment.audioUrl,
+            segment: predictedSegment
+          }
         }
+
         await audioManager.crossfadeTo(audioSource, 1500)
         currentMusicSegment.value = predictedSegment
         musicChangesCount++
@@ -405,6 +483,10 @@ export function useDrivingSimulation() {
     isPredicting,
     currentMusicSegment,
     musicSegments,
-    musicChangesCount
+    musicChangesCount,
+    generateForStyle,
+    generateForEvent,
+    hasApiKey,
+    isGenerating
   }
 }

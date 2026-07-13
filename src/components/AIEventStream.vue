@@ -20,14 +20,14 @@ const formatTime = () => {
 
 const getTypeColor = (type: string) => {
   const colors: Record<string, string> = {
-    system: '#6b7280',
-    info: '#3b82f6',
-    route: '#8b5cf6',
-    speed: '#f59e0b',
-    music: '#06b6d4',
-    cache: '#10b981'
+    system: '#9a8668',
+    info: '#b8a687',
+    route: '#c9a962',
+    speed: '#dcc88a',
+    music: '#e8dcc4',
+    cache: '#d4c7b0'
   }
-  return colors[type] || '#8b5cf6'
+  return colors[type] || '#c9a962'
 }
 
 const addEvent = (text: string, type: string) => {
@@ -96,9 +96,9 @@ onUnmounted(() => {
 
 <template>
   <div class="glass-card p-4 h-48">
-    <div class="flex items-center gap-2 mb-3 pb-2 border-b border-white/10">
+    <div class="flex items-center gap-2 mb-3 pb-2 border-b border-glass-border">
       <div class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
-      <span class="text-white font-semibold text-sm">AI Event Stream</span>
+      <span class="text-primary-theme font-semibold text-sm">AI Event Stream</span>
     </div>
     
     <div 
@@ -111,7 +111,7 @@ onUnmounted(() => {
         class="group"
       >
         <div class="flex items-start gap-2">
-          <span class="text-white/40 text-xs font-mono flex-shrink-0">[{{ event.timestamp }}]</span>
+          <span class="text-muted-theme text-xs font-mono flex-shrink-0">[{{ event.timestamp }}]</span>
           <div class="flex-1">
             <p 
               class="text-sm transition-colors duration-300"
@@ -124,7 +124,7 @@ onUnmounted(() => {
         <div class="h-px bg-white/5 mt-2"></div>
       </div>
       
-      <div v-if="events.length === 0" class="text-center text-white/30 text-sm py-4">
+      <div v-if="events.length === 0" class="text-center text-muted-theme text-sm py-4">
         Waiting for events...
       </div>
     </div>

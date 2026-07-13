@@ -1,12 +1,14 @@
 import type { MusicSegment, RouteStep } from '@/api'
+import { getAudioUrlForStyle } from '@/api'
 import { MusicGenerator, type MusicGeneratorConfig } from './MusicGenerator'
 
 export interface AudioSource {
   id: string
-  type: 'synthesized' | 'url'
+  type: 'synthesized' | 'url' | 'ai-generated'
   url?: string
   segment?: MusicSegment
   step?: RouteStep
+  aiGenerated?: boolean
 }
 
 export interface PlaybackState {
@@ -15,14 +17,8 @@ export interface PlaybackState {
   volume: number
   tempo: number
   energy: number
-}
-
-const STYLE_AUDIO_MAP: Record<string, string> = {
-  'calm': '/music/Calm.mp3',
-  'build': '/music/Build.mp3',
-  'cruise': '/music/Cruise.mp3',
-  'peak': '/music/Peak.mp3',
-  'ending': '/music/Ending.mp3'
+  isUsingFallback: boolean
+  fallbackReason: string | null
 }
 
 export class AudioManager {
@@ -40,6 +36,9 @@ export class AudioManager {
   private tempo = 100
   private baseVolume = 0.5
   private musicGenerator: MusicGenerator | null = null
+  private isUsingFallback = false
+  private fallbackReason: string | null = null
+  private listeners: Set<(state: PlaybackState) => void> = new Set()
 
   get playbackState(): PlaybackState {
     return {
@@ -47,8 +46,20 @@ export class AudioManager {
       currentSource: this.currentSource,
       volume: this.masterGain?.gain.value || 0,
       tempo: this.tempo,
-      energy: this.energy
+      energy: this.energy,
+      isUsingFallback: this.isUsingFallback,
+      fallbackReason: this.fallbackReason
     }
+  }
+
+  subscribe(listener: (state: PlaybackState) => void): () => void {
+    this.listeners.add(listener)
+    return () => this.listeners.delete(listener)
+  }
+
+  private notifyListeners(): void {
+    const state = this.playbackState
+    this.listeners.forEach(listener => listener(state))
   }
 
   private initContext(): void {
@@ -77,25 +88,49 @@ export class AudioManager {
     }
   }
 
-  async preload(sources: AudioSource[]): Promise<void> {
+  async preload(sources: AudioSource[]): Promise<{ success: string[]; failed: string[] }> {
     this.initContext()
+    const success: string[] = []
+    const failed: string[] = []
+    
     for (const source of sources) {
       if (!this.cache.has(source.id)) {
-        if (source.type === 'url' && source.url) {
+        if (source.type === 'ai-generated' || source.aiGenerated || source.type === 'url' || source.url) {
+          const url = source.url || getAudioUrlForStyle(source.segment?.style || 'calm')
           try {
-            const response = await fetch(source.url)
+            const response = await fetch(url)
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}`)
+            }
             const arrayBuffer = await response.arrayBuffer()
             const audioBuffer = await this.audioContext!.decodeAudioData(arrayBuffer)
             this.cache.set(source.id, audioBuffer)
+            success.push(source.id)
+            this.isUsingFallback = false
+            this.fallbackReason = null
           } catch (error) {
             console.warn(`Failed to preload ${source.id}:`, error)
-            await this.generateAndCache(source)
+            failed.push(source.id)
           }
         } else if (source.type === 'synthesized') {
           await this.generateAndCache(source)
+          success.push(source.id)
         }
+      } else {
+        success.push(source.id)
       }
     }
+    
+    if (failed.length > 0 && success.length === 0) {
+      this.isUsingFallback = true
+      this.fallbackReason = 'All audio files failed to load, using synthesized fallback'
+      for (const source of sources) {
+        await this.generateAndCache(source)
+      }
+    }
+    
+    this.notifyListeners()
+    return { success, failed }
   }
 
   private async generateAndCache(source: AudioSource): Promise<void> {
@@ -137,6 +172,7 @@ export class AudioManager {
 
     this.createBufferSource(buffer, source, { fadeIn, loop })
     this.isPlaying = true
+    this.notifyListeners()
   }
 
   private async getBufferForSource(source: AudioSource): Promise<AudioBuffer | null> {
@@ -144,17 +180,30 @@ export class AudioManager {
       await this.resume()
     }
 
-    if (source.type === 'url' && source.url) {
+    if (source.type === 'ai-generated' || source.aiGenerated || source.url) {
+      const url = source.url || getAudioUrlForStyle(source.segment?.style || 'calm')
+      
       if (this.cache.has(source.id)) {
         return this.cache.get(source.id)!
       }
+      
       try {
-        const response = await fetch(source.url)
+        const response = await fetch(url)
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`)
+        }
         const arrayBuffer = await response.arrayBuffer()
         const audioBuffer = await this.audioContext!.decodeAudioData(arrayBuffer)
         this.cache.set(source.id, audioBuffer)
+        this.isUsingFallback = false
+        this.fallbackReason = null
+        this.notifyListeners()
         return audioBuffer
-      } catch {
+      } catch (error) {
+        console.error(`Failed to load audio file: ${url}`, error)
+        this.isUsingFallback = true
+        this.fallbackReason = `Audio file not found: ${url}, using synthesized fallback`
+        this.notifyListeners()
         return this.generateBufferForSource(source)
       }
     } else if (source.type === 'synthesized') {
@@ -162,6 +211,32 @@ export class AudioManager {
         return this.cache.get(source.id)!
       }
       return this.generateBufferForSource(source)
+    } else {
+      const url = getAudioUrlForStyle(source.segment?.style || 'calm')
+      
+      if (this.cache.has(source.id)) {
+        return this.cache.get(source.id)!
+      }
+      
+      try {
+        const response = await fetch(url)
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`)
+        }
+        const arrayBuffer = await response.arrayBuffer()
+        const audioBuffer = await this.audioContext!.decodeAudioData(arrayBuffer)
+        this.cache.set(source.id, audioBuffer)
+        this.isUsingFallback = false
+        this.fallbackReason = null
+        this.notifyListeners()
+        return audioBuffer
+      } catch (error) {
+        console.error(`Failed to load audio file: ${url}`, error)
+        this.isUsingFallback = true
+        this.fallbackReason = `Audio file not found: ${url}, using synthesized fallback`
+        this.notifyListeners()
+        return this.generateBufferForSource(source)
+      }
     }
 
     return null
@@ -226,6 +301,7 @@ export class AudioManager {
         this.currentSource = null
         this.activeBufferSource = null
         this.activeGainNode = null
+        this.notifyListeners()
       }
     }
 
@@ -293,11 +369,13 @@ export class AudioManager {
     this.activeBufferSource = newSource
     this.activeGainNode = newGain
     this.currentSource = source
+    this.notifyListeners()
   }
 
   private async stopCurrentSource(duration: number = 300): Promise<void> {
     if (!this.activeBufferSource || !this.activeGainNode || !this.audioContext) {
       this.isPlaying = false
+      this.notifyListeners()
       return
     }
 
@@ -316,6 +394,7 @@ export class AudioManager {
         this.activeBufferSource = null
         this.activeGainNode = null
         this.isPlaying = false
+        this.notifyListeners()
         resolve()
       }, duration)
     })
@@ -341,6 +420,7 @@ export class AudioManager {
         )
       }
     }
+    this.notifyListeners()
   }
 
   setTempo(tempo: number): void {
@@ -358,6 +438,7 @@ export class AudioManager {
         )
       }
     }
+    this.notifyListeners()
   }
 
   setVolume(volume: number): void {
@@ -366,6 +447,7 @@ export class AudioManager {
     if (this.audioContext && this.masterGain) {
       this.masterGain.gain.setTargetAtTime(this.baseVolume, this.audioContext.currentTime, 0.1)
     }
+    this.notifyListeners()
   }
 
   pause(): void {
@@ -376,6 +458,7 @@ export class AudioManager {
       this.activeBufferSource = null
     }
     this.isPlaying = false
+    this.notifyListeners()
   }
 
   unpause(): void {
@@ -402,10 +485,6 @@ export class AudioManager {
       this.audioContext.close()
       this.audioContext = null
     }
-  }
-
-  getAudioUrlForStyle(style: string): string {
-    return STYLE_AUDIO_MAP[style.toLowerCase()] || STYLE_AUDIO_MAP['calm']
   }
 }
 

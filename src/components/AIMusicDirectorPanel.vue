@@ -80,54 +80,54 @@ const getKey = () => {
 
 <template>
   <div class="fixed right-6 top-28 w-72 z-50">
-    <div class="glass-card p-5 backdrop-blur-2xl border-white/15 shadow-2xl">
-      <div class="flex items-center gap-2 mb-4 pb-4 border-b border-white/10">
+    <div class="glass-card p-5 backdrop-blur-2xl border-glass-border shadow-2xl">
+      <div class="flex items-center gap-2 mb-4 pb-4 border-b border-glass-border">
         <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
           <Brain class="w-5 h-5 text-white" />
         </div>
-        <span class="text-white font-semibold">AI Music Director</span>
+        <span class="text-primary-theme font-semibold">AI Music Director</span>
       </div>
       
-      <div class="mb-4 pb-4 border-b border-white/10">
+      <div class="mb-4 pb-4 border-b border-glass-border">
         <div class="flex items-center gap-2 mb-3">
           <div class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
-          <span class="text-white/60 text-sm">AI STATUS</span>
+          <span class="text-secondary-theme text-sm">AI STATUS</span>
         </div>
         
         <div class="space-y-2 text-sm">
           <div class="flex items-center gap-2">
             <div class="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></div>
-            <span class="text-white">Thinking...</span>
+            <span class="text-primary-theme">Thinking...</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-white/50">Current Road</span>
-            <span class="text-white">{{ currentRoad }}</span>
+            <span class="text-muted-theme">Current Road</span>
+            <span class="text-primary-theme">{{ currentRoad }}</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-white/50">Next Road</span>
+            <span class="text-muted-theme">Next Road</span>
             <span class="text-primary">{{ nextRoad }}</span>
           </div>
           <div class="flex justify-between items-center">
-            <span class="text-white/50 flex items-center gap-1">
+            <span class="text-muted-theme flex items-center gap-1">
               <Clock class="w-3 h-3" />
               ETA
             </span>
-            <span class="text-white font-mono">{{ eta }} s</span>
+            <span class="text-primary-theme font-mono">{{ eta }} s</span>
           </div>
         </div>
       </div>
       
-      <div class="mb-4 pb-4 border-b border-white/10">
-        <div class="text-white/60 text-sm mb-2">AI Decision</div>
-        <div class="text-white font-semibold mb-2">{{ currentDecision.action }}</div>
-        <div class="text-white/50 text-sm flex items-start gap-2">
+      <div class="mb-4 pb-4 border-b border-glass-border">
+        <div class="text-secondary-theme text-sm mb-2">AI Decision</div>
+        <div class="text-primary-theme font-semibold mb-2">{{ currentDecision.action }}</div>
+        <div class="text-muted-theme text-sm flex items-start gap-2">
           <Zap class="w-3 h-3 mt-0.5 text-yellow-400 flex-shrink-0" />
           <span>{{ currentDecision.reason }}</span>
         </div>
       </div>
       
-      <div class="mb-4 pb-4 border-b border-white/10">
-        <div class="text-white/60 text-sm mb-3">Music Cache</div>
+      <div class="mb-4 pb-4 border-b border-glass-border">
+        <div class="text-secondary-theme text-sm mb-3">Music Cache</div>
         <div class="space-y-2">
           <div 
             v-for="item in cacheItems" 
@@ -142,15 +142,15 @@ const getKey = () => {
               v-else 
               class="w-4 h-4 text-blue-400 animate-spin" 
             />
-            <span :class="item.status === 'cached' ? 'text-white' : 'text-white/60'">
+            <span :class="item.status === 'cached' ? 'text-primary-theme' : 'text-muted-theme'">
               {{ item.id }}
             </span>
           </div>
         </div>
       </div>
       
-      <div class="mb-4 pb-4 border-b border-white/10">
-        <div class="text-white/60 text-sm mb-3">Current Music</div>
+      <div class="mb-4 pb-4 border-b border-glass-border">
+        <div class="text-secondary-theme text-sm mb-3">Current Music</div>
         <div class="flex items-center gap-3 mb-3">
           <div 
             class="w-10 h-10 rounded-lg flex items-center justify-center"
@@ -159,37 +159,37 @@ const getKey = () => {
             <Music class="w-5 h-5" :style="{ color: currentConfig.color }" />
           </div>
           <div>
-            <div class="text-white font-semibold">{{ currentMusicId }}</div>
-            <div class="text-white/50 text-xs">{{ currentMusic?.style?.toUpperCase() }}</div>
+            <div class="text-primary-theme font-semibold">{{ currentMusicId }}</div>
+            <div class="text-muted-theme text-xs">{{ currentMusic?.style?.toUpperCase() }}</div>
           </div>
         </div>
         
         <div class="grid grid-cols-3 gap-2 text-center">
-          <div class="bg-white/5 rounded-lg p-2">
-            <div class="text-white/50 text-xs">Energy</div>
-            <div class="text-white font-mono">{{ Math.round(energy) }}%</div>
+          <div class="bg-glass-bg rounded-lg p-2">
+            <div class="text-muted-theme text-xs">Energy</div>
+            <div class="text-primary-theme font-mono">{{ Math.round(energy) }}%</div>
           </div>
-          <div class="bg-white/5 rounded-lg p-2">
-            <div class="text-white/50 text-xs">Tempo</div>
-            <div class="text-white font-mono">{{ Math.round(tempo) }} BPM</div>
+          <div class="bg-glass-bg rounded-lg p-2">
+            <div class="text-muted-theme text-xs">Tempo</div>
+            <div class="text-primary-theme font-mono">{{ Math.round(tempo) }} BPM</div>
           </div>
-          <div class="bg-white/5 rounded-lg p-2">
-            <div class="text-white/50 text-xs">Key</div>
-            <div class="text-white text-xs">{{ getKey() }}</div>
+          <div class="bg-glass-bg rounded-lg p-2">
+            <div class="text-muted-theme text-xs">Key</div>
+            <div class="text-primary-theme text-xs">{{ getKey() }}</div>
           </div>
         </div>
       </div>
       
       <div>
-        <div class="text-white/60 text-sm mb-2">Prediction Confidence</div>
+        <div class="text-secondary-theme text-sm mb-2">Prediction Confidence</div>
         <div class="flex items-center gap-3">
-          <div class="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+          <div class="flex-1 h-2 bg-glass-border rounded-full overflow-hidden">
             <div 
               class="h-full bg-gradient-to-r from-green-400 to-blue-400 rounded-full transition-all duration-500"
               :style="{ width: `${predictionConfidence}%` }"
             ></div>
           </div>
-          <span class="text-white font-mono text-sm">{{ Math.round(predictionConfidence) }}%</span>
+          <span class="text-primary-theme font-mono text-sm">{{ Math.round(predictionConfidence) }}%</span>
         </div>
       </div>
     </div>

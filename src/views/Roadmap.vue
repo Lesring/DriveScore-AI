@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Smartphone, Car, Monitor, Cpu, Layers, ArrowRight, Sparkles, Home } from 'lucide-vue-next'
+import NavBar from '@/components/NavBar.vue'
 
 const router = useRouter()
 const isLoaded = ref(false)
@@ -13,7 +14,7 @@ const roadmapItems = [
     title: 'Phone App',
     description: 'Mobile application for iOS and Android. Connects to car audio systems via Bluetooth. Personalized music recommendations based on driving patterns.',
     icon: Smartphone,
-    color: '#3b82f6',
+    color: '#b8a687',
     features: ['Real-time driving detection', 'Bluetooth audio sync', 'Personalized playlists']
   },
   {
@@ -21,7 +22,7 @@ const roadmapItems = [
     title: 'CarPlay',
     description: 'Deep integration with Apple CarPlay. Native infotainment system support. Hands-free voice control for music selection.',
     icon: Car,
-    color: '#8b5cf6',
+    color: '#c9a962',
     features: ['CarPlay integration', 'Voice commands', 'Dashboard widgets']
   },
   {
@@ -29,7 +30,7 @@ const roadmapItems = [
     title: 'Android Auto',
     description: 'Complete support for Android Auto. Seamless integration with Google services. Waze and Google Maps integration.',
     icon: Car,
-    color: '#06b6d4',
+    color: '#dcc88a',
     features: ['Android Auto', 'Google Maps sync', 'Assistant integration']
   },
   {
@@ -37,7 +38,7 @@ const roadmapItems = [
     title: 'Smart Cockpit',
     description: 'Next-generation smart cockpit integration. Multi-screen support. Advanced AI copilot features.',
     icon: Monitor,
-    color: '#10b981',
+    color: '#e8dcc4',
     features: ['Multi-screen', 'AI copilot', 'Gesture control']
   },
   {
@@ -45,7 +46,7 @@ const roadmapItems = [
     title: 'Vehicle OS',
     description: 'Deep integration with vehicle operating systems. Real-time vehicle data access. Predictive maintenance and safety alerts.',
     icon: Cpu,
-    color: '#f59e0b',
+    color: '#f5efe6',
     features: ['OS integration', 'Vehicle data API', 'Predictive AI']
   },
   {
@@ -53,7 +54,7 @@ const roadmapItems = [
     title: 'Autonomous',
     description: 'Full autonomous driving support. AI-generated soundtracks for Level 5 autonomy. Passenger experience optimization.',
     icon: Layers,
-    color: '#ef4444',
+    color: '#d4c7b0',
     features: ['Level 5 support', 'Passenger mode', 'Adaptive experience']
   }
 ]
@@ -76,11 +77,13 @@ const goHome = () => {
 </script>
 
 <template>
-  <div class="min-h-screen relative overflow-hidden">
-    <div class="absolute inset-0 bg-gradient-to-br from-dark via-dark-light to-purple-900/20"></div>
+  <div class="min-h-screen relative overflow-hidden page-bg" data-highlight="roadmap">
+    <div class="absolute inset-0 bg-gradient-theme"></div>
     
-    <div class="absolute top-1/4 right-1/4 w-96 h-96 bg-purple-500/30 rounded-full blur-3xl"></div>
-    <div class="absolute bottom-1/4 left-1/4 w-80 h-80 bg-blue-500/30 rounded-full blur-3xl"></div>
+    <div class="absolute top-1/4 right-1/4 w-96 h-96 bg-primary/15 rounded-full blur-3xl"></div>
+    <div class="absolute bottom-1/4 left-1/4 w-80 h-80 bg-secondary/15 rounded-full blur-3xl"></div>
+    
+    <NavBar title="Roadmap" :showBack="true" @back="router.push('/vision')" />
     
     <main class="relative z-10 px-4 py-8">
       <div class="max-w-6xl mx-auto">
@@ -89,22 +92,22 @@ const goHome = () => {
           :class="{ 'animate-fade-in-up': isLoaded, 'opacity-0': !isLoaded }"
         >
           <div class="inline-flex items-center gap-2 px-4 py-2 glass-card mb-6 rounded-full">
-            <Sparkles class="w-4 h-4 text-purple-400" />
-            <span class="text-sm text-white/80">Our Vision</span>
+            <Sparkles class="w-4 h-4 text-primary" />
+            <span class="text-sm text-text-secondary">Our Vision</span>
           </div>
           
-          <h1 class="text-4xl md:text-6xl font-bold text-white mb-6">
+          <h1 class="text-4xl md:text-6xl font-bold text-text-primary mb-6">
             Roadmap to the<br/>
             <span class="gradient-text">Future</span>
           </h1>
           
-          <p class="text-white/60 text-lg max-w-2xl mx-auto">
+          <p class="text-text-muted text-lg max-w-2xl mx-auto">
             A journey towards seamless integration of AI-driven music experiences into every driving scenario.
           </p>
         </div>
         
         <div class="relative">
-          <div class="absolute left-1/2 transform -translate-x-1/2 h-full w-0.5 bg-gradient-to-b from-purple-500 via-blue-500 to-pink-500"></div>
+          <div class="absolute left-1/2 transform -translate-x-1/2 h-full w-0.5 bg-gradient-to-b from-secondary-dark via-primary to-primary-light"></div>
           
           <div class="space-y-16">
             <div 
@@ -156,11 +159,11 @@ const goHome = () => {
                       >
                         {{ item.year }}
                       </span>
-                      <ArrowRight class="w-5 h-5 text-white/30" />
-                      <h3 class="text-xl font-semibold text-white">{{ item.title }}</h3>
+                      <ArrowRight class="w-5 h-5 text-muted-theme" />
+                      <h3 class="text-xl font-semibold text-primary-theme">{{ item.title }}</h3>
                     </div>
                     
-                    <p class="text-white/60 mb-4">{{ item.description }}</p>
+                    <p class="text-secondary-theme mb-4">{{ item.description }}</p>
                     
                     <div class="flex flex-wrap justify-center md:justify-start gap-2">
                       <span 

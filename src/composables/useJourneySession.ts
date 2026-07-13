@@ -1,5 +1,6 @@
 import { reactive, ref } from 'vue'
 import type { RouteAnalysis, MusicGeneration, Prediction, MusicSegment } from '@/api'
+import { getAudioUrlForStyle } from '@/api'
 
 export type AIStatus = 'idle' | 'loading' | 'ready' | 'fallback' | 'error'
 
@@ -89,7 +90,10 @@ export function useJourneySession() {
   }
 
   const setMusicSegments = (generation: MusicGeneration, source: 'ai' | 'fallback' = 'ai') => {
-    session.musicSegments = generation.segments
+    session.musicSegments = generation.segments.map(segment => ({
+      ...segment,
+      audioUrl: segment.audioUrl || getAudioUrlForStyle(segment.style)
+    }))
     session.musicSource = source
     session.dataSource = source === 'ai' ? 'ai' : 'fallback'
     session.aiStatus = source === 'ai' ? 'ready' : 'fallback'

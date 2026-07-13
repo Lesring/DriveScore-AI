@@ -11,14 +11,14 @@ export const stateConfigs: Record<DrivingState, {
   style: string
   color: string
 }> = {
-  parking: { energy: 10, tempo: 0, style: 'Silent', color: '#6b7280' },
-  city: { energy: 35, tempo: 85, style: 'Urban Chill', color: '#3b82f6' },
-  accelerating: { energy: 70, tempo: 120, style: 'Building Energy', color: '#f59e0b' },
-  highway: { energy: 85, tempo: 130, style: 'Cruise Electronic', color: '#8b5cf6' },
-  overtaking: { energy: 95, tempo: 150, style: 'Intense Beat', color: '#ef4444' },
-  cruise: { energy: 75, tempo: 125, style: 'Smooth Groove', color: '#06b6d4' },
-  decelerating: { energy: 40, tempo: 90, style: 'Cooling Down', color: '#10b981' },
-  arrived: { energy: 20, tempo: 60, style: 'Arrival Theme', color: '#8b5cf6' }
+  parking: { energy: 10, tempo: 0, style: 'Silent', color: '#9a8668' },
+  city: { energy: 35, tempo: 85, style: 'Urban Chill', color: '#b8a687' },
+  accelerating: { energy: 70, tempo: 120, style: 'Building Energy', color: '#c9a962' },
+  highway: { energy: 85, tempo: 130, style: 'Cruise Electronic', color: '#dcc88a' },
+  overtaking: { energy: 95, tempo: 150, style: 'Intense Beat', color: '#f5efe6' },
+  cruise: { energy: 75, tempo: 125, style: 'Smooth Groove', color: '#e8dcc4' },
+  decelerating: { energy: 40, tempo: 90, style: 'Cooling Down', color: '#d4c7b0' },
+  arrived: { energy: 20, tempo: 60, style: 'Arrival Theme', color: '#c9b896' }
 }
 
 export const roadTypes: JourneyStep['type'][] = ['city', 'elevated', 'highway', 'urban', 'end']
@@ -115,11 +115,11 @@ export const musicLibrary = [
 ]
 
 export const journeyTimeline = [
-  { id: 1, name: 'Calm', style: 'calm', duration: 5000, color: '#10b981' },
-  { id: 2, name: 'Build', style: 'build', duration: 5000, color: '#f59e0b' },
-  { id: 3, name: 'Cruise', style: 'cruise', duration: 6000, color: '#8b5cf6' },
-  { id: 4, name: 'Peak', style: 'peak', duration: 4000, color: '#ef4444' },
-  { id: 5, name: 'Ending', style: 'ending', duration: 5000, color: '#3b82f6' }
+  { id: 1, name: 'Calm', style: 'calm', duration: 5000, color: '#d4c7b0' },
+  { id: 2, name: 'Build', style: 'build', duration: 5000, color: '#c9a962' },
+  { id: 3, name: 'Cruise', style: 'cruise', duration: 6000, color: '#dcc88a' },
+  { id: 4, name: 'Peak', style: 'peak', duration: 4000, color: '#f5efe6' },
+  { id: 5, name: 'Ending', style: 'ending', duration: 5000, color: '#b8a687' }
 ]
 
 export const predictionData = {
@@ -187,11 +187,11 @@ export const reasoningSteps = [
 ]
 
 export const journeyBrainSteps = [
-  { id: 1, name: 'Urban', icon: 'Building2', color: '#3b82f6', description: 'City navigation' },
-  { id: 2, name: 'Build', icon: 'TrendingUp', color: '#f59e0b', description: 'Elevated road' },
-  { id: 3, name: 'Highway', icon: 'Road', color: '#8b5cf6', description: 'Main highway' },
-  { id: 4, name: 'Peak', icon: 'Zap', color: '#ef4444', description: 'High speed' },
-  { id: 5, name: 'Ending', icon: 'Flag', color: '#10b981', description: 'Destination' }
+  { id: 1, name: 'Urban', icon: 'Building2', color: '#b8a687', description: 'City navigation' },
+  { id: 2, name: 'Build', icon: 'TrendingUp', color: '#c9a962', description: 'Elevated road' },
+  { id: 3, name: 'Highway', icon: 'Road', color: '#dcc88a', description: 'Main highway' },
+  { id: 4, name: 'Peak', icon: 'Zap', color: '#f5efe6', description: 'High speed' },
+  { id: 5, name: 'Ending', icon: 'Flag', color: '#d4c7b0', description: 'Destination' }
 ]
 
 export const eventStreamTemplates = {
@@ -282,31 +282,31 @@ export const finalVisionData = [
     phase: 'Today',
     title: 'Music Player',
     description: 'Static playlists, manual control',
-    color: '#6b7280',
+    color: '#9a8668',
     icon: 'Headphones'
   },
   {
     phase: 'Tomorrow',
     title: 'Journey Music Engine',
     description: 'AI-generated, route-aware',
-    color: '#8b5cf6',
+    color: '#c9a962',
     icon: 'Music'
   },
   {
     phase: 'Future',
     title: 'AI Sound Companion',
     description: 'Emotional, adaptive, predictive',
-    color: '#06b6d4',
+    color: '#dcc88a',
     icon: 'Brain'
   }
 ]
 
 export const composerProgressData = [
-  { id: 'Calm_01', name: 'Calm_01', style: 'Calm', targetProgress: 100, color: '#10b981' },
-  { id: 'Build_01', name: 'Build_01', style: 'Build', targetProgress: 100, color: '#f59e0b' },
-  { id: 'Cruise_02', name: 'Cruise_02', style: 'Cruise', targetProgress: 100, color: '#8b5cf6' },
-  { id: 'Peak_01', name: 'Peak_01', style: 'Peak', targetProgress: 100, color: '#ef4444' },
-  { id: 'Ending_01', name: 'Ending_01', style: 'Ending', targetProgress: 100, color: '#3b82f6' }
+  { id: 'Calm_01', name: 'Calm_01', style: 'Calm', targetProgress: 100, color: '#d4c7b0' },
+  { id: 'Build_01', name: 'Build_01', style: 'Build', targetProgress: 100, color: '#c9a962' },
+  { id: 'Cruise_02', name: 'Cruise_02', style: 'Cruise', targetProgress: 100, color: '#dcc88a' },
+  { id: 'Peak_01', name: 'Peak_01', style: 'Peak', targetProgress: 100, color: '#f5efe6' },
+  { id: 'Ending_01', name: 'Ending_01', style: 'Ending', targetProgress: 100, color: '#b8a687' }
 ]
 
 export const cacheMemoryData = {

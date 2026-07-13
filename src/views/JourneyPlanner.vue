@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { MapPin, Navigation, ChevronDown, Music, Clock, Zap, AlertCircle, RefreshCw } from 'lucide-vue-next'
+import NavBar from '@/components/NavBar.vue'
 import type { JourneyBlueprint } from '@/types'
 import ComposerPanel from '@/components/ComposerPanel.vue'
 import CacheEngine from '@/components/CacheEngine.vue'
@@ -141,24 +142,17 @@ const energyColor = (energy: number) => {
 </script>
 
 <template>
-  <div class="min-h-screen relative overflow-hidden">
-    <div class="absolute inset-0 bg-gradient-to-br from-dark via-dark-light to-primary/10"></div>
+  <div class="min-h-screen relative overflow-hidden page-bg" data-highlight="music">
+    <div class="absolute inset-0 bg-gradient-theme"></div>
     
-    <nav class="relative z-10 flex items-center justify-between px-8 py-6">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-          <Navigation class="w-6 h-6 text-white" />
-        </div>
-        <span class="text-xl font-bold text-white">Journey Planner</span>
-      </div>
-    </nav>
+    <NavBar title="Journey Planner" :showBack="true" @back="router.push('/')" />
     
     <main class="relative z-10 px-4 py-8 max-w-6xl mx-auto">
       <div 
         class="glass-card p-8 mb-8"
         :class="{ 'animate-fade-in-up': true }"
       >
-        <h2 class="text-2xl font-bold text-white mb-6">Plan Your Journey</h2>
+        <h2 class="text-2xl font-bold text-primary-theme mb-6">Plan Your Journey</h2>
         
         <div class="grid md:grid-cols-2 gap-6 mb-8">
           <div class="relative">
@@ -169,7 +163,7 @@ const energyColor = (energy: number) => {
               v-model="startPoint"
               type="text"
               placeholder="Start Location"
-              class="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-primary/50 transition-colors"
+              class="w-full pl-12 pr-4 py-4 bg-glass-bg border border-glass-border rounded-xl text-primary-theme placeholder:text-muted-theme focus:outline-none focus:border-primary/50 transition-colors"
             />
           </div>
           
@@ -181,7 +175,7 @@ const energyColor = (energy: number) => {
               v-model="endPoint"
               type="text"
               placeholder="Destination"
-              class="w-full pl-12 pr-4 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-secondary/50 transition-colors"
+              class="w-full pl-12 pr-4 py-4 bg-glass-bg border border-glass-border rounded-xl text-primary-theme placeholder:text-muted-theme focus:outline-none focus:border-secondary/50 transition-colors"
             />
           </div>
         </div>
@@ -195,7 +189,7 @@ const energyColor = (energy: number) => {
               <div class="w-3 h-3 rounded-full bg-primary animate-pulse"></div>
               <span class="text-primary font-semibold">{{ statusText }}</span>
             </div>
-            <div class="mt-2 h-1 bg-white/10 rounded-full overflow-hidden">
+            <div class="mt-2 h-1 bg-glass-border rounded-full overflow-hidden">
               <div 
                 class="h-full bg-gradient-to-r from-primary to-secondary rounded-full transition-all duration-300"
                 :style="{ 
@@ -215,7 +209,7 @@ const energyColor = (energy: number) => {
           <AlertCircle class="w-5 h-5 text-red-400 flex-shrink-0" />
           <div class="flex-1">
             <div class="text-red-400 font-semibold">AI Generation Failed</div>
-            <div class="text-white/70 text-sm">{{ errorMessage }}</div>
+            <div class="text-secondary-theme text-sm">{{ errorMessage }}</div>
           </div>
           <button 
             @click="retryGeneration"
@@ -262,7 +256,7 @@ const energyColor = (energy: number) => {
           :class="{ 'animate-slide-in-right': true }"
         >
           <div class="flex items-center gap-3 mb-6">
-            <h3 class="text-xl font-bold text-white flex items-center gap-3">
+            <h3 class="text-xl font-bold text-primary-theme flex items-center gap-3">
               <Navigation class="w-6 h-6 text-primary" />
               Journey Route
             </h3>
@@ -281,15 +275,15 @@ const energyColor = (energy: number) => {
               class="flex items-center gap-4 group"
             >
               <div 
-                class="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold transition-all duration-300 group-hover:scale-110"
-                :class="step.type === 'highway' ? 'bg-gradient-to-br from-primary to-accent' : step.type === 'elevated' ? 'bg-gradient-to-br from-secondary to-primary' : 'bg-white/10'"
+                class="w-12 h-12 rounded-xl flex items-center justify-center font-bold transition-all duration-300 group-hover:scale-110"
+                :class="step.type === 'highway' ? 'bg-gradient-to-br from-primary to-accent text-white' : step.type === 'elevated' ? 'bg-gradient-to-br from-secondary to-primary text-white' : 'bg-glass-border text-primary-theme'"
               >
                 {{ index + 1 }}
               </div>
               
               <div class="flex-1">
-                <h4 class="text-white font-semibold">{{ step.name }}</h4>
-                <div class="flex items-center gap-4 text-sm text-white/50">
+                <h4 class="text-primary-theme font-semibold">{{ step.name }}</h4>
+                <div class="flex items-center gap-4 text-sm text-muted-theme">
                   <span class="flex items-center gap-1">
                     <Clock class="w-4 h-4" />
                     {{ formatDuration(step.duration) }}
@@ -300,7 +294,7 @@ const energyColor = (energy: number) => {
               
               <ChevronDown 
                 v-if="index < blueprint.steps.length - 1"
-                class="w-5 h-5 text-white/30"
+                class="w-5 h-5 text-muted-theme"
               />
             </div>
           </div>
@@ -312,7 +306,7 @@ const energyColor = (energy: number) => {
           style="animation-delay: 0.2s"
         >
           <div class="flex items-center gap-3 mb-6">
-            <h3 class="text-xl font-bold text-white flex items-center gap-3">
+            <h3 class="text-xl font-bold text-primary-theme flex items-center gap-3">
               <Music class="w-6 h-6 text-secondary" />
               Music Chapters
             </h3>
@@ -328,23 +322,23 @@ const energyColor = (energy: number) => {
             <div 
               v-for="chapter in blueprint.musicChapters"
               :key="chapter.id"
-              class="p-4 bg-white/5 rounded-xl"
+              class="p-4 bg-glass-bg rounded-xl"
             >
               <div class="flex items-center justify-between mb-3">
-                <h4 class="text-white font-semibold text-lg">{{ chapter.name }}</h4>
-                <span class="text-sm text-white/50">{{ formatDuration(chapter.duration) }}</span>
+                <h4 class="text-primary-theme font-semibold text-lg">{{ chapter.name }}</h4>
+                <span class="text-sm text-muted-theme">{{ formatDuration(chapter.duration) }}</span>
               </div>
               
               <div class="space-y-3">
                 <div>
                   <div class="flex items-center justify-between text-sm mb-1">
-                    <span class="text-white/60 flex items-center gap-1">
+                    <span class="text-muted-theme flex items-center gap-1">
                       <Zap class="w-4 h-4 text-yellow-400" />
                       Energy
                     </span>
-                    <span class="text-white">{{ chapter.energy }}%</span>
+                    <span class="text-primary-theme">{{ chapter.energy }}%</span>
                   </div>
-                  <div class="h-2 bg-white/10 rounded-full overflow-hidden">
+                  <div class="h-2 bg-glass-border rounded-full overflow-hidden">
                     <div 
                       class="h-full rounded-full transition-all duration-500"
                       :class="energyColor(chapter.energy)"
@@ -355,13 +349,13 @@ const energyColor = (energy: number) => {
                 
                 <div>
                   <div class="flex items-center justify-between text-sm mb-1">
-                    <span class="text-white/60 flex items-center gap-1">
+                    <span class="text-muted-theme flex items-center gap-1">
                       <Music class="w-4 h-4 text-secondary" />
                       Tempo
                     </span>
-                    <span class="text-white">{{ chapter.tempo }} BPM</span>
+                    <span class="text-primary-theme">{{ chapter.tempo }} BPM</span>
                   </div>
-                  <div class="h-2 bg-white/10 rounded-full overflow-hidden">
+                  <div class="h-2 bg-glass-border rounded-full overflow-hidden">
                     <div 
                       class="h-full rounded-full bg-gradient-to-r from-secondary to-primary transition-all duration-500"
                       :style="{ width: `${(chapter.tempo / 150) * 100}%` }"
@@ -388,7 +382,7 @@ const energyColor = (energy: number) => {
           <span>Start Driving Simulation</span>
         </button>
         
-        <p class="mt-4 text-white/50 text-sm">
+        <p class="mt-4 text-muted-theme text-sm">
           Estimated Journey Time: {{ formatDuration(blueprint.totalDuration) }}
         </p>
       </div>

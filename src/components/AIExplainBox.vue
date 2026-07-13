@@ -78,11 +78,11 @@ const formatTime = (date: Date) => {
       <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
         <Bot class="w-5 h-5 text-white" />
       </div>
-      <span class="text-white font-semibold">AI Assistant</span>
-      <div class="flex-1 h-px bg-white/10"></div>
+      <span class="text-primary-theme font-semibold">AI Assistant</span>
+      <div class="flex-1 h-px bg-glass-border"></div>
       <div class="flex items-center gap-1">
         <div class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
-        <span class="text-white/50 text-sm">Active</span>
+        <span class="text-muted-theme text-sm">Active</span>
       </div>
     </div>
     
@@ -94,14 +94,14 @@ const formatTime = (date: Date) => {
       >
         <ChevronRight class="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
         <div class="flex-1">
-          <p class="text-white text-sm">{{ message.text }}</p>
-          <span class="text-white/40 text-xs">{{ formatTime(message.timestamp) }}</span>
+          <p class="text-primary-theme text-sm">{{ message.text }}</p>
+          <span class="text-muted-theme text-xs">{{ formatTime(message.timestamp) }}</span>
         </div>
       </div>
       
       <div v-if="messages.length === 0" class="flex items-center gap-3">
-        <ChevronRight class="w-4 h-4 text-white/30 flex-shrink-0 mt-0.5" />
-        <span class="text-white/40 text-sm">Waiting for driving data...</span>
+        <ChevronRight class="w-4 h-4 text-muted-theme flex-shrink-0 mt-0.5" />
+        <span class="text-muted-theme text-sm">Waiting for driving data...</span>
       </div>
     </div>
   </div>

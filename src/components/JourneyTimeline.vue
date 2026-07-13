@@ -51,16 +51,16 @@ const getSegmentStatus = (index: number) => {
 
 <template>
   <div class="fixed bottom-0 left-0 right-0 z-30">
-    <div class="glass-card mx-4 mb-4 p-4 backdrop-blur-xl border-white/10">
+    <div class="glass-card mx-4 mb-4 p-4 backdrop-blur-xl border-glass-border">
       <div class="flex items-center justify-between mb-3">
-        <span class="text-white/60 text-sm">Journey Timeline</span>
-        <span class="text-white/50 text-sm">
+        <span class="text-secondary-theme text-sm">Journey Timeline</span>
+        <span class="text-muted-theme text-sm">
           {{ Math.round(timelineProgress) }}% Complete
         </span>
       </div>
       
       <div class="relative">
-        <div class="absolute top-1/2 left-0 right-0 h-1 bg-white/10 -translate-y-1/2 rounded-full"></div>
+        <div class="absolute top-1/2 left-0 right-0 h-1 bg-glass-border -translate-y-1/2 rounded-full"></div>
         
         <div 
           class="absolute top-1/2 left-0 h-1 bg-gradient-to-r from-primary via-secondary to-accent -translate-y-1/2 rounded-full transition-all duration-300"
@@ -74,18 +74,18 @@ const getSegmentStatus = (index: number) => {
             class="flex flex-col items-center"
           >
             <div 
-              class="w-12 h-12 rounded-full flex items-center justify-center font-bold text-white transition-all duration-300 cursor-pointer relative group"
+              class="w-12 h-12 rounded-full flex items-center justify-center font-bold transition-all duration-300 cursor-pointer relative group"
               :class="{
                 'ring-2 ring-offset-2 ring-offset-dark ring-primary shadow-lg shadow-primary/50 scale-110': getSegmentStatus(index) === 'current',
                 'bg-gradient-to-br from-primary to-secondary shadow-glow': getSegmentStatus(index) === 'completed',
-                'bg-white/10': getSegmentStatus(index) === 'pending'
+                'bg-glass-border': getSegmentStatus(index) === 'pending'
               }"
               :style="getSegmentStatus(index) === 'current' ? { background: `linear-gradient(135deg, ${segment.color}, ${segment.color}80)` } : {}"
             >
               <span 
                 :class="{
                   'text-white': getSegmentStatus(index) !== 'pending',
-                  'text-white/30': getSegmentStatus(index) === 'pending'
+                  'text-primary-theme': getSegmentStatus(index) === 'pending'
                 }"
               >
                 {{ segment.name.charAt(0) }}
@@ -101,9 +101,9 @@ const getSegmentStatus = (index: number) => {
             <div 
               class="mt-2 text-xs font-medium transition-colors duration-300"
               :class="{
-                'text-white': getSegmentStatus(index) === 'current',
+                'text-primary-theme': getSegmentStatus(index) === 'current',
                 'text-primary': getSegmentStatus(index) === 'completed',
-                'text-white/30': getSegmentStatus(index) === 'pending'
+                'text-muted-theme': getSegmentStatus(index) === 'pending'
               }"
             >
               {{ segment.name }}
@@ -112,8 +112,8 @@ const getSegmentStatus = (index: number) => {
             <div 
               class="text-xs transition-colors duration-300"
               :class="{
-                'text-white/60': getSegmentStatus(index) === 'current',
-                'text-white/30': getSegmentStatus(index) !== 'current'
+                'text-secondary-theme': getSegmentStatus(index) === 'current',
+                'text-muted-theme': getSegmentStatus(index) !== 'current'
               }"
             >
               {{ Math.round(segment.duration / 1000) }}s

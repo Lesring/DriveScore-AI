@@ -34,7 +34,7 @@ watch(() => props.drivingState, (newState) => {
   <div class="glass-card p-4">
     <div class="flex items-center gap-2 mb-4">
       <Brain class="w-5 h-5 text-primary" />
-      <span class="text-white font-semibold text-sm">AI Explainability</span>
+      <span class="text-primary-theme font-semibold text-sm">AI Explainability</span>
     </div>
     
     <div 
@@ -45,21 +45,21 @@ watch(() => props.drivingState, (newState) => {
       <div class="bg-primary/10 rounded-lg p-3">
         <div class="flex items-center gap-2 mb-2">
           <Lightbulb class="w-4 h-4 text-yellow-400" />
-          <span class="text-white/60 text-xs uppercase">Reason</span>
+          <span class="text-secondary-theme text-xs uppercase">Reason</span>
         </div>
-        <p class="text-white text-sm">{{ currentExplanation.reason }}</p>
+        <p class="text-primary-theme text-sm">{{ currentExplanation.reason }}</p>
       </div>
       
       <div class="flex justify-center">
-        <ArrowRight class="w-4 h-4 text-white/30" />
+        <ArrowRight class="w-4 h-4 text-muted-theme" />
       </div>
       
       <div class="bg-green-500/10 rounded-lg p-3">
         <div class="flex items-center gap-2 mb-2">
           <Brain class="w-4 h-4 text-green-400" />
-          <span class="text-white/60 text-xs uppercase">Action</span>
+          <span class="text-secondary-theme text-xs uppercase">Action</span>
         </div>
-        <p class="text-white text-sm">{{ currentExplanation.action }}</p>
+        <p class="text-primary-theme text-sm">{{ currentExplanation.action }}</p>
       </div>
     </div>
   </div>

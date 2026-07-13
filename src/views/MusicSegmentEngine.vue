@@ -4,6 +4,8 @@ import { useRouter } from 'vue-router'
 import { Music, Clock, Zap, ChevronRight, Download, Loader2, Play, Pause } from 'lucide-vue-next'
 import { musicLibrary } from '@/mock/data'
 import { audioManager, type AudioSource } from '@/audio/AudioManager'
+import { getAudioUrlForStyle } from '@/api'
+import NavBar from '@/components/NavBar.vue'
 
 const router = useRouter()
 const activeStyle = ref<'calm' | 'build' | 'cruise' | 'peak' | 'ending'>('build')
@@ -35,21 +37,6 @@ const formatDuration = (seconds: number) => {
   return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
-const goHome = () => {
-  router.push('/')
-}
-
-const getAudioUrlForStyle = (style: string): string => {
-  const styleMap: Record<string, string> = {
-    'calm': '/music/Calm.mp3',
-    'build': '/music/Build.mp3',
-    'cruise': '/music/Cruise.mp3',
-    'peak': '/music/Peak.mp3',
-    'ending': '/music/Ending.mp3'
-  }
-  return styleMap[style.toLowerCase()] || '/music/Calm.mp3'
-}
-
 const playSegment = async (id: string) => {
   if (playingSegment.value === id) {
     audioManager.stop()
@@ -63,15 +50,18 @@ const playSegment = async (id: string) => {
     const segment = musicLibrary.find(m => m.id === id)
     if (!segment) return
 
+    const audioUrl = getAudioUrlForStyle(segment.style)
+    
     const audioSource: AudioSource = {
       id: segment.id,
-      type: 'synthesized',
+      type: 'url',
+      url: audioUrl,
       segment: {
         ...segment,
         tempo: segment.bpm,
         progress: 100,
         style: segment.style.charAt(0).toUpperCase() + segment.style.slice(1),
-        audioUrl: getAudioUrlForStyle(segment.style)
+        audioUrl
       }
     }
 
@@ -86,37 +76,23 @@ const playSegment = async (id: string) => {
 </script>
 
 <template>
-  <div class="min-h-screen relative overflow-hidden">
-    <div class="absolute inset-0 bg-gradient-to-br from-dark via-dark-light to-primary/10"></div>
+  <div class="min-h-screen relative overflow-hidden page-bg">
+    <div class="absolute inset-0 bg-gradient-theme"></div>
     
-    <nav class="relative z-10 flex items-center justify-between px-8 py-6">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-          <Music class="w-6 h-6 text-white" />
-        </div>
-        <span class="text-xl font-bold text-white">Music Segment Engine</span>
-      </div>
-      
-      <button 
-        @click="goHome"
-        class="px-6 py-2 bg-white/10 border border-white/20 rounded-full text-white text-sm hover:bg-white/20 transition-colors"
-      >
-        Return Home
-      </button>
-    </nav>
+    <NavBar title="Music Segment Engine" :showBack="true" @back="router.push('/')" />
     
     <main class="relative z-10 px-4 py-8">
       <div class="max-w-6xl mx-auto">
         <div class="glass-card p-6 mb-8">
           <div class="flex items-center justify-between">
             <div>
-              <h2 class="text-2xl font-bold text-white mb-2">Music Library</h2>
-              <p class="text-white/60">AI-generated music segments organized by style</p>
+              <h2 class="text-2xl font-bold text-primary-theme mb-2">Music Library</h2>
+              <p class="text-secondary-theme">AI-generated music segments organized by style</p>
             </div>
             
             <div class="flex items-center gap-2">
               <div class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
-              <span class="text-white/60 text-sm">Engine Active</span>
+              <span class="text-muted-theme text-sm">Engine Active</span>
             </div>
           </div>
         </div>
@@ -129,7 +105,7 @@ const playSegment = async (id: string) => {
             class="px-6 py-3 rounded-full font-semibold transition-all duration-300 whitespace-nowrap"
             :class="{
               'text-white shadow-lg': activeStyle === style.id,
-              'text-white/60 bg-white/5 border border-white/10': activeStyle !== style.id
+              'text-secondary-theme bg-glass-bg border border-glass-border': activeStyle !== style.id
             }"
             :style="activeStyle === style.id ? { background: `linear-gradient(135deg, ${style.color}, ${style.color}80)` } : {}"
           >
@@ -160,7 +136,7 @@ const playSegment = async (id: string) => {
                   />
                 </div>
                 <div>
-                  <h3 class="text-white font-semibold text-lg">{{ segment.id }}</h3>
+                  <h3 class="text-primary-theme font-semibold text-lg">{{ segment.id }}</h3>
                   <span 
                     class="text-sm px-2 py-0.5 rounded-full"
                     :style="{ background: `${styles.find(s => s.id === segment.style)?.color}20`, color: styles.find(s => s.id === segment.style)?.color }"
@@ -174,15 +150,15 @@ const playSegment = async (id: string) => {
                 @click="playSegment(segment.id)"
                 :disabled="isLoading === segment.id"
                 class="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300"
-                :class="{
-                  'bg-primary': getSegmentStatus(segment.id) === 'playing',
-                  'bg-white/10 hover:bg-white/20': getSegmentStatus(segment.id) !== 'playing',
-                  'opacity-50': isLoading === segment.id
-                }"
+            :class="{
+              'bg-primary': getSegmentStatus(segment.id) === 'playing',
+              'bg-glass-border hover:bg-glass-bg': getSegmentStatus(segment.id) !== 'playing',
+              'opacity-50': isLoading === segment.id
+            }"
               >
                 <Loader2 
                   v-if="isLoading === segment.id"
-                  class="w-5 h-5 text-white animate-spin"
+                  class="w-5 h-5 text-primary-theme animate-spin"
                 />
                 <Pause 
                   v-else-if="getSegmentStatus(segment.id) === 'playing'"
@@ -190,39 +166,39 @@ const playSegment = async (id: string) => {
                 />
                 <Play 
                   v-else 
-                  class="w-5 h-5 text-white" 
+                  class="w-5 h-5 text-primary-theme" 
                 />
               </button>
             </div>
             
             <div class="grid grid-cols-4 gap-3 mb-4">
-              <div class="bg-white/5 rounded-lg p-3 text-center">
-                <div class="text-white/50 text-xs flex items-center justify-center gap-1 mb-1">
+              <div class="bg-glass-bg rounded-lg p-3 text-center">
+                <div class="text-muted-theme text-xs flex items-center justify-center gap-1 mb-1">
                   <Zap class="w-3 h-3" />
                   Energy
                 </div>
-                <div class="text-white font-semibold">{{ segment.energy }}%</div>
+                <div class="text-primary-theme font-semibold">{{ segment.energy }}%</div>
               </div>
               
-              <div class="bg-white/5 rounded-lg p-3 text-center">
-                <div class="text-white/50 text-xs flex items-center justify-center gap-1 mb-1">
+              <div class="bg-glass-bg rounded-lg p-3 text-center">
+                <div class="text-muted-theme text-xs flex items-center justify-center gap-1 mb-1">
                   <Music class="w-3 h-3" />
                   BPM
                 </div>
-                <div class="text-white font-semibold">{{ segment.bpm }}</div>
+                <div class="text-primary-theme font-semibold">{{ segment.bpm }}</div>
               </div>
               
-              <div class="bg-white/5 rounded-lg p-3 text-center">
-                <div class="text-white/50 text-xs mb-1">Key</div>
-                <div class="text-white font-semibold text-sm">{{ segment.key }}</div>
+              <div class="bg-glass-bg rounded-lg p-3 text-center">
+                <div class="text-muted-theme text-xs mb-1">Key</div>
+                <div class="text-primary-theme font-semibold text-sm">{{ segment.key }}</div>
               </div>
               
-              <div class="bg-white/5 rounded-lg p-3 text-center">
-                <div class="text-white/50 text-xs flex items-center justify-center gap-1 mb-1">
+              <div class="bg-glass-bg rounded-lg p-3 text-center">
+                <div class="text-muted-theme text-xs flex items-center justify-center gap-1 mb-1">
                   <Clock class="w-3 h-3" />
                   Duration
                 </div>
-                <div class="text-white font-semibold">{{ formatDuration(segment.duration) }}</div>
+                <div class="text-primary-theme font-semibold">{{ formatDuration(segment.duration) }}</div>
               </div>
             </div>
             
@@ -238,14 +214,14 @@ const playSegment = async (id: string) => {
                 />
                 <ChevronRight 
                   v-else 
-                  class="w-4 h-4 text-white/30" 
+                  class="w-4 h-4 text-muted-theme" 
                 />
                 
                 <span 
                   :class="{
                     'text-green-400': getSegmentStatus(segment.id) === 'cached',
                     'text-blue-400': getSegmentStatus(segment.id) === 'loading',
-                    'text-white/30': getSegmentStatus(segment.id) === 'available',
+                    'text-muted-theme': getSegmentStatus(segment.id) === 'available',
                     'text-primary': getSegmentStatus(segment.id) === 'playing'
                   }"
                 >
@@ -273,27 +249,27 @@ const playSegment = async (id: string) => {
         </div>
         
         <div class="mt-8 glass-card p-6">
-          <h3 class="text-white font-semibold mb-4">Engine Status</h3>
+          <h3 class="text-primary-theme font-semibold mb-4">Engine Status</h3>
           
           <div class="grid grid-cols-4 gap-4">
-            <div class="bg-white/5 rounded-lg p-4">
-              <div class="text-2xl font-bold text-white mb-1">{{ musicLibrary.length }}</div>
-              <div class="text-white/50 text-sm">Total Segments</div>
+            <div class="bg-glass-bg rounded-lg p-4">
+              <div class="text-2xl font-bold text-primary-theme mb-1">{{ musicLibrary.length }}</div>
+              <div class="text-muted-theme text-sm">Total Segments</div>
             </div>
             
-            <div class="bg-white/5 rounded-lg p-4">
+            <div class="bg-glass-bg rounded-lg p-4">
               <div class="text-2xl font-bold text-green-400 mb-1">3</div>
-              <div class="text-white/50 text-sm">Cached</div>
+              <div class="text-muted-theme text-sm">Cached</div>
             </div>
             
-            <div class="bg-white/5 rounded-lg p-4">
+            <div class="bg-glass-bg rounded-lg p-4">
               <div class="text-2xl font-bold text-blue-400 mb-1">2</div>
-              <div class="text-white/50 text-sm">Loading</div>
+              <div class="text-muted-theme text-sm">Loading</div>
             </div>
             
-            <div class="bg-white/5 rounded-lg p-4">
+            <div class="bg-glass-bg rounded-lg p-4">
               <div class="text-2xl font-bold text-primary mb-1">{{ playingSegment ? 1 : 0 }}</div>
-              <div class="text-white/50 text-sm">Playing</div>
+              <div class="text-muted-theme text-sm">Playing</div>
             </div>
           </div>
         </div>
