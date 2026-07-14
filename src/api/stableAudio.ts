@@ -308,9 +308,12 @@ const PHASE_INTENSITY_MULTIPLIERS: Record<string, { tempo: number; energy: numbe
 export const buildPrompt = (config: MusicStyleConfig): string => {
   const customSettings = getCustomMusicSettings()
   
-  const sharedInstruments = customSettings?.instruments.length
-    ? customSettings.instruments.join(', ')
-    : config.instruments.join(', ')
+  const baseInstruments = [...new Set([...SHARED_SONIC_IDENTITY.coreInstruments, ...config.instruments])]
+  const customInstruments = customSettings?.instruments || []
+  const sharedInstruments = [...new Set([...baseInstruments, ...customInstruments])].join(', ')
+  
+  const customGenreFlavor = customSettings?.genre ? ` with ${customSettings.genre} flavor` : ''
+  const genre = `${SHARED_SONIC_IDENTITY.genreFamily}${customGenreFlavor}`
   
   const mood = customSettings?.mood || config.mood
   
@@ -339,6 +342,8 @@ export const buildPrompt = (config: MusicStyleConfig): string => {
 
   return `Create phase "${config.style}" of ONE continuous cinematic-electronic driving soundtrack suite. 
 Keep the SAME sonic identity across all journey phases. 
+Shared genre family: ${SHARED_SONIC_IDENTITY.genreFamily}. 
+Genre: ${genre}.
 Shared palette: ${sharedInstruments}. 
 This phase role: ${config.phaseRole}. 
 Tempo: ${tempo} BPM. 

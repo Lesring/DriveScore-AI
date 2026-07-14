@@ -7,7 +7,6 @@ import { audioManager, type AudioSource } from '@/audio/AudioManager'
 import { useJourneySession } from '@/composables/useJourneySession'
 import { ROAD_EVENT_MAPPING, type RoadAction } from '@/composables/useRoadSimulator'
 import { useStableAudio } from '@/composables/useStableAudio'
-import { DEFAULT_MUSIC_STYLE_CONFIGS } from '@/api/stableAudio'
 
 const fallbackMusicSegments: MusicSegment[] = [
   { id: 'Calm_01', style: 'Calm', energy: 25, tempo: 65, key: 'C Major', duration: 180, progress: 100, emotion: 'Relax', reason: 'Demo data - Urban driving requires calm music', audioUrl: getAudioUrlForStyle('Calm') },
@@ -20,7 +19,7 @@ const fallbackMusicSegments: MusicSegment[] = [
 export function useDrivingSimulation() {
   const router = useRouter()
   const { session, addDrivingStat, addPrediction, subscribe } = useJourneySession()
-  const { generateForStyle, generateForEvent, getGeneratedForStyle, getGeneratedForEvent, hasApiKey, isGenerating, setJourneySeed, generateSeedFromRoute } = useStableAudio()
+  const { generateForStyle, generateForEvent, getGeneratedForStyle, hasApiKey } = useStableAudio()
   
   const isDriving = ref(false)
   const isPaused = ref(false)
@@ -77,10 +76,6 @@ export function useDrivingSimulation() {
     localStorage.setItem('drivescore-music-cache', JSON.stringify(generatedMusicCache))
   }
 
-  const hasCachedMusic = (style: string): boolean => {
-    return !!generatedMusicCache[style.toLowerCase()]
-  }
-
   const getCachedMusicUrl = (style: string): string | undefined => {
     return generatedMusicCache[style.toLowerCase()]
   }
@@ -88,43 +83,6 @@ export function useDrivingSimulation() {
   const setCachedMusicUrl = (style: string, url: string) => {
     generatedMusicCache[style.toLowerCase()] = url
     saveMusicCache()
-  }
-
-  const preGenerateAllMusic = async (seed?: number): Promise<boolean> => {
-    if (!hasApiKey.value) {
-      console.log('[DrivingSimulation] No API key configured, skipping AI generation')
-      return false
-    }
-
-    if (seed) {
-      setJourneySeed(seed)
-      console.log(`[DrivingSimulation] Using journey seed: ${seed}`)
-    }
-
-    const stylesToGenerate = Object.keys(DEFAULT_MUSIC_STYLE_CONFIGS)
-    let allGenerated = true
-
-    loadMusicCache()
-
-    for (const style of stylesToGenerate) {
-      if (hasCachedMusic(style)) {
-        console.log(`[DrivingSimulation] Music for ${style} already cached`)
-        continue
-      }
-
-      console.log(`[DrivingSimulation] Generating AI music for ${style} with seed ${seed}...`)
-      const generated = await generateForStyle(style, { duration: 30, seed })
-      
-      if (generated) {
-        setCachedMusicUrl(style, generated.url)
-        console.log(`[DrivingSimulation] Successfully generated ${style}: ${generated.url}`)
-      } else {
-        console.warn(`[DrivingSimulation] Failed to generate ${style}, will use fallback`)
-        allGenerated = false
-      }
-    }
-
-    return allGenerated
   }
 
   loadMusicCache()
@@ -273,21 +231,14 @@ export function useDrivingSimulation() {
               aiGenerated: true
             }
             aiGenerated = true
-          } else {
-            let generatedAudio = target.eventType 
-              ? getGeneratedForEvent(target.eventType) 
-              : getGeneratedForStyle(target.musicStyle)
-            
-            if (!generatedAudio) {
-              generatedAudio = getGeneratedForStyle(target.musicStyle)
-            }
-
-            if (generatedAudio) {
-              setCachedMusicUrl(target.musicStyle, generatedAudio.url)
+          } else if (target.eventType) {
+            const eventGenerated = await generateForEvent(target.eventType, { seedOffset: 100 })
+            if (eventGenerated) {
+              setCachedMusicUrl(target.eventType, eventGenerated.url)
               audioSource = {
-                id: `ai_${generatedAudio.id}`,
+                id: `ai_${eventGenerated.id}`,
                 type: 'ai-generated',
-                url: generatedAudio.url,
+                url: eventGenerated.url,
                 segment,
                 aiGenerated: true
               }
@@ -299,6 +250,13 @@ export function useDrivingSimulation() {
                 url: segment.audioUrl,
                 segment
               }
+            }
+          } else {
+            audioSource = {
+              id: segment.id,
+              type: segment.audioUrl ? 'url' : 'synthesized',
+              url: segment.audioUrl,
+              segment
             }
           }
         } else {
@@ -350,7 +308,7 @@ export function useDrivingSimulation() {
     stop()
   })
 
-  const startDriving = async (shouldPreGenerate: boolean = true) => {
+  const startDriving = async () => {
     musicSegments.value = session.musicSegments.length > 0 
       ? session.musicSegments 
       : fallbackMusicSegments
@@ -359,23 +317,7 @@ export function useDrivingSimulation() {
       console.warn('[DrivingSimulation] Using fallback music segments - no session data available')
     }
     
-    if (shouldPreGenerate && hasApiKey.value) {
-      const stylesToCheck = ['Calm', 'Build', 'Cruise', 'Peak', 'Ending']
-      const needsGeneration = stylesToCheck.some(style => !hasCachedMusic(style))
-      
-      if (needsGeneration) {
-        console.log('[DrivingSimulation] Pre-generating AI music segments...')
-        const routeString = typeof session.routeInput === 'string' 
-          ? session.routeInput 
-          : JSON.stringify(session.routeInput)
-        const journeySeedValue = routeString 
-          ? generateSeedFromRoute(routeString) 
-          : Math.floor(Math.random() * 1000000)
-        await preGenerateAllMusic(journeySeedValue)
-      } else {
-        console.log('[DrivingSimulation] All music segments already cached')
-      }
-    }
+    console.log('[DrivingSimulation] Starting driving - using cached music')
     
     isDriving.value = true
     isPaused.value = false
@@ -635,7 +577,6 @@ export function useDrivingSimulation() {
     musicChangesCount,
     generateForStyle,
     generateForEvent,
-    hasApiKey,
-    isGenerating
+    hasApiKey
   }
 }
