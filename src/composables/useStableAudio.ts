@@ -23,6 +23,7 @@ export function useStableAudio() {
   const generatedAudios = ref<GeneratedAudio[]>([])
   const lastError = ref<string | null>(null)
   const isApiConfigured = ref(true)
+  const journeySeed = ref<number | null>(null)
 
   const availableStyles = computed(() => {
     return Object.keys(DEFAULT_MUSIC_STYLE_CONFIGS)
@@ -39,6 +40,22 @@ export function useStableAudio() {
   const checkApiKey = () => {
     isApiConfigured.value = hasApiKey.value
     return isApiConfigured.value
+  }
+
+  const setJourneySeed = (seed: number | null) => {
+    journeySeed.value = seed
+  }
+
+  const generateSeedFromRoute = (routeInput: string): number => {
+    let hash = 0
+    for (let i = 0; i < routeInput.length; i++) {
+      const char = routeInput.charCodeAt(i)
+      hash = ((hash << 5) - hash) + char
+      hash = hash & hash
+    }
+    const result = Math.abs(hash) % 1000000
+    journeySeed.value = result
+    return result
   }
 
   const getStyleConfig = (style: string): MusicStyleConfig | null => {
@@ -102,12 +119,13 @@ export function useStableAudio() {
     lastError.value = null
 
     try {
+      const effectiveSeed = options.seed ?? (journeySeed.value ?? undefined)
       const prompt = buildPrompt(config)
       
       const response = await generateAudioWithWait({
         prompt,
         seconds_total: options.duration || 30,
-        seed: options.seed,
+        seed: effectiveSeed,
         steps: 100,
         guidance_scale: 3.0
       })
@@ -166,9 +184,12 @@ export function useStableAudio() {
     lastError,
     isApiConfigured,
     hasApiKey,
+    journeySeed,
     availableStyles,
     availableEvents,
     checkApiKey,
+    setJourneySeed,
+    generateSeedFromRoute,
     getStyleConfig,
     getEventConfig,
     generateForStyle,

@@ -27,7 +27,7 @@ export interface PredictPromptInput {
 }
 
 export const analyzeRoutePrompt = (input: AnalyzeRoutePromptInput): string => {
-  return `You are an AI Journey Music Engine. Analyze the driving route and create a Journey Blueprint.
+  return `You are an AI Journey Music Engine. Analyze the driving route and create a Journey Blueprint for ONE continuous cinematic-electronic driving soundtrack suite.
 
 Input:
 - Start: ${input.start}
@@ -38,15 +38,22 @@ Input:
 
 Generate a Journey Blueprint with 5 phases: Urban → Build → Highway → Peak → Ending.
 
+IMPORTANT CONSTRAINTS:
+- All 5 phases must share the SAME musical palette, same instrument family, and same tonal color
+- Use a journey-level unified mood (cinematic electronic / ambient synthwave style)
+- Each phase only changes: energy level, tempo, arrangement density, not genre or instrument family
+- Recommend the SAME key or closely related keys (e.g., all in C major / A minor family)
+- Energy curve: Calm < Build < Cruise < Peak > Ending
+
 For each phase, provide:
 - name: The phase name (Urban, Build, Highway, Peak, Ending)
 - type: Road type (city, elevated, highway, urban, end)
 - duration: Duration in seconds
 - speed: Average speed in km/h
-- energy: Energy level 0-100
-- tempo: BPM (beats per minute)
-- emotion: Emotion description
-- reason: Why this phase is selected
+- energy: Energy level 0-100 (following energy curve)
+- tempo: BPM (beats per minute, following energy curve)
+- emotion: Emotion intensity description (same theme, different intensity)
+- reason: Why this phase intensity is selected
 
 Output ONLY valid JSON with this structure:
 {
@@ -55,7 +62,8 @@ Output ONLY valid JSON with this structure:
   "weather": "${input.weather}",
   "traffic": "Light",
   "driverStyle": "${input.driverStyle}",
-  "mood": "Energetic",
+  "mood": "Cinematic Electronic",
+  "musicalKey": "string (e.g., C Major)",
   "steps": [
     { "id": 1, "name": "Urban", "type": "city", "duration": number, "speed": number, "energy": number, "tempo": number, "emotion": "string", "reason": "string" },
     { "id": 2, "name": "Build", "type": "elevated", "duration": number, "speed": number, "energy": number, "tempo": number, "emotion": "string", "reason": "string" },
@@ -73,22 +81,31 @@ export const generateMusicPrompt = (input: GenerateMusicPromptInput): string => 
     `- ${s.name}: ${s.type}, ${s.duration}s, ${s.speed}km/h, energy ${s.energy ?? 50}, tempo ${s.tempo ?? 100}`
   ).join('\n')
   
-  return `You are an AI Music Composer for driving experiences. Generate music segments based on the Journey Blueprint.
+  return `You are an AI Music Composer for driving experiences. Generate music segments for ONE continuous cinematic-electronic driving soundtrack suite.
 
 Journey Blueprint:
 ${steps}
+
+IMPORTANT CONSTRAINTS:
+- All 5 segments must share the SAME musical palette, same instrument family, and same tonal color
+- Use cinematic electronic / ambient synthwave style for all segments
+- All segments should be in the SAME key or closely related keys (e.g., C major / A minor family)
+- Emotion/reason should emphasize: "same soundtrack suite, different intensity"
+- Energy curve: Calm < Build < Cruise < Peak > Ending
+- Only change: energy level, tempo, arrangement density. Do NOT change genre or instrument family
+- NO conflicting style descriptions (e.g., Calm=jazz, Peak=metal is FORBIDDEN)
 
 Generate 5 music segments (Calm, Build, Cruise, Peak, Ending) for this journey.
 
 For each segment, provide:
 - id: Segment ID (e.g., Calm_01)
 - style: Music style (Calm, Build, Cruise, Peak, Ending)
-- energy: Energy level 0-100
-- tempo: BPM
-- emotion: Emotion description
-- key: Musical key (e.g., C Major, A Minor)
+- energy: Energy level 0-100 (following energy curve)
+- tempo: BPM (following energy curve)
+- emotion: Emotion description (same theme, different intensity)
+- key: Musical key (same or closely related across all segments)
 - duration: Duration in seconds
-- reason: Why this music is selected for this phase
+- reason: Why this intensity is selected (emphasize same soundtrack variation)
 
 Output ONLY valid JSON with this structure:
 {

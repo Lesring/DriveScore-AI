@@ -20,7 +20,7 @@ const fallbackMusicSegments: MusicSegment[] = [
 export function useDrivingSimulation() {
   const router = useRouter()
   const { session, addDrivingStat, addPrediction, subscribe } = useJourneySession()
-  const { generateForStyle, generateForEvent, getGeneratedForStyle, getGeneratedForEvent, hasApiKey, isGenerating } = useStableAudio()
+  const { generateForStyle, generateForEvent, getGeneratedForStyle, getGeneratedForEvent, hasApiKey, isGenerating, setJourneySeed, generateSeedFromRoute } = useStableAudio()
   
   const isDriving = ref(false)
   const isPaused = ref(false)
@@ -90,10 +90,15 @@ export function useDrivingSimulation() {
     saveMusicCache()
   }
 
-  const preGenerateAllMusic = async (): Promise<boolean> => {
+  const preGenerateAllMusic = async (seed?: number): Promise<boolean> => {
     if (!hasApiKey.value) {
       console.log('[DrivingSimulation] No API key configured, skipping AI generation')
       return false
+    }
+
+    if (seed) {
+      setJourneySeed(seed)
+      console.log(`[DrivingSimulation] Using journey seed: ${seed}`)
     }
 
     const stylesToGenerate = Object.keys(DEFAULT_MUSIC_STYLE_CONFIGS)
@@ -107,8 +112,8 @@ export function useDrivingSimulation() {
         continue
       }
 
-      console.log(`[DrivingSimulation] Generating AI music for ${style}...`)
-      const generated = await generateForStyle(style, { duration: 30 })
+      console.log(`[DrivingSimulation] Generating AI music for ${style} with seed ${seed}...`)
+      const generated = await generateForStyle(style, { duration: 30, seed })
       
       if (generated) {
         setCachedMusicUrl(style, generated.url)
@@ -360,7 +365,13 @@ export function useDrivingSimulation() {
       
       if (needsGeneration) {
         console.log('[DrivingSimulation] Pre-generating AI music segments...')
-        await preGenerateAllMusic()
+        const routeString = typeof session.routeInput === 'string' 
+          ? session.routeInput 
+          : JSON.stringify(session.routeInput)
+        const journeySeedValue = routeString 
+          ? generateSeedFromRoute(routeString) 
+          : Math.floor(Math.random() * 1000000)
+        await preGenerateAllMusic(journeySeedValue)
       } else {
         console.log('[DrivingSimulation] All music segments already cached')
       }

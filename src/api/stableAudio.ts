@@ -31,128 +31,151 @@ export interface MusicStyleConfig {
   tempo: number
   energy: number
   description: string
+  phaseRole: string
+}
+
+const SHARED_SONIC_IDENTITY = {
+  genreFamily: 'cinematic electronic / ambient synthwave',
+  coreInstruments: ['warm analog pads', 'soft piano', 'subtle synth bass', 'light electronic percussion'],
+  optionalInstruments: ['soft arpeggio', 'filtered drums', 'airy textures'],
+  forbiddenInstruments: ['distorted guitar', 'heavy metal', 'orchestral trailer brass', 'lo-fi hiphop vinyl crackle', 'folk acoustic', 'progressive house drop'],
+  baseTempo: 100,
+  baseEnergy: 50
 }
 
 export const DEFAULT_MUSIC_STYLE_CONFIGS: Record<string, MusicStyleConfig> = {
   calm: {
     style: 'Calm',
-    instruments: ['grand piano', 'warm pad synthesizers', 'soft mallet percussion', 'cello'],
-    mood: 'serene, peaceful, relaxing, meditative',
-    genre: 'ambient, cinematic, neoclassical',
+    instruments: [...SHARED_SONIC_IDENTITY.coreInstruments],
+    mood: 'serene, peaceful, meditative, introspective',
+    genre: SHARED_SONIC_IDENTITY.genreFamily,
     tempo: 65,
     energy: 20,
-    description: 'Beautiful ambient cinematic music with gentle piano arpeggios, warm atmospheric pads, soft mallet percussion, and subtle cello. Perfect for calm urban driving scenes. High quality production, professional mixing, crystal clear audio.'
+    description: 'This is phase Calm of ONE continuous cinematic-electronic driving soundtrack suite. Keep the same sonic identity, instruments family, and tonal color as the other phases. Only change intensity. Sparse piano with warm pads, almost no drums. Intro of the same soundtrack.',
+    phaseRole: 'intro - sparse, minimal, establishing theme'
   },
   build: {
     style: 'Build',
-    instruments: ['progression synth arpeggio', 'deep bassline', 'shaker', 'toms', 'subtle hi-hats'],
-    mood: 'hopeful, anticipatory, uplifting, building',
-    genre: 'electronic, progressive house, cinematic',
+    instruments: [...SHARED_SONIC_IDENTITY.coreInstruments, 'soft arpeggio'],
+    mood: 'hopeful, anticipatory, rising, building',
+    genre: SHARED_SONIC_IDENTITY.genreFamily,
     tempo: 95,
     energy: 45,
-    description: 'Progressive electronic music with rising synth arpeggios, deep pulsing bassline, and subtle percussion. Gradually builds energy and tension. Perfect for accelerating into highway. Professional production, clean mix, wide stereo image.'
+    description: 'This is phase Build of ONE continuous cinematic-electronic driving soundtrack suite. Keep the same sonic identity, instruments family, and tonal color as the other phases. Only change intensity. Add soft arpeggio and light percussion to the same palette, rising but maintaining the same instruments.',
+    phaseRole: 'development - adding layers, increasing density'
   },
   cruise: {
     style: 'Cruise',
-    instruments: ['electric guitar', 'bass guitar', 'tight drum kit', 'analog synthesizer', 'rhythm guitar'],
-    mood: 'energetic, driving, upbeat, confident',
-    genre: 'synthwave, indie rock, electronic rock',
-    tempo: 120,
-    energy: 70,
-    description: 'High-energy synthwave rock music with catchy guitar riffs, driving bassline, tight drums, and retro synthesizers. Perfect for highway cruising at night. Professional production quality, powerful mix, punchy drums.'
+    instruments: [...SHARED_SONIC_IDENTITY.coreInstruments, 'soft arpeggio', 'filtered drums'],
+    mood: 'confident, steady, driving, relaxed',
+    genre: SHARED_SONIC_IDENTITY.genreFamily,
+    tempo: 115,
+    energy: 65,
+    description: 'This is phase Cruise of ONE continuous cinematic-electronic driving soundtrack suite. Keep the same sonic identity, instruments family, and tonal color as the other phases. Only change intensity. Steady pulse with confident groove, same synth and piano palette throughout.',
+    phaseRole: 'main theme - steady groove, full arrangement'
   },
   peak: {
     style: 'Peak',
-    instruments: ['heavy drums', 'distorted guitar', 'powerful synths', 'epic strings', 'sub bass'],
-    mood: 'intense, thrilling, adrenaline, epic',
-    genre: 'electronic rock, cinematic, epic trailer',
-    tempo: 140,
+    instruments: [...SHARED_SONIC_IDENTITY.coreInstruments, 'soft arpeggio', 'filtered drums', 'airy textures'],
+    mood: 'intense, energetic, bright, climactic',
+    genre: SHARED_SONIC_IDENTITY.genreFamily,
+    tempo: 135,
     energy: 90,
-    description: 'Epic cinematic rock music with thunderous drums, distorted guitars, powerful synthesizers, and orchestral strings. Maximum energy for intense driving moments like overtaking. Professional epic production, massive sound, dramatic build.'
+    description: 'This is phase Peak of ONE continuous cinematic-electronic driving soundtrack suite. Keep the same sonic identity, instruments family, and tonal color as the other phases. Only change intensity. Denser drums, stronger bass, brighter leads - but NO genre jump, NO rock takeover. Climax variation of the same theme.',
+    phaseRole: 'climax - maximum intensity, densest arrangement'
   },
   ending: {
     style: 'Ending',
-    instruments: ['grand piano', 'string orchestra', 'soft woodwinds', 'gentle chimes'],
-    mood: 'peaceful, reflective, nostalgic, calming',
-    genre: 'classical, cinematic, ambient',
+    instruments: [...SHARED_SONIC_IDENTITY.coreInstruments],
+    mood: 'peaceful, reflective, resolving, calming',
+    genre: SHARED_SONIC_IDENTITY.genreFamily,
     tempo: 70,
     energy: 30,
-    description: 'Beautiful cinematic conclusion music with emotional piano melody, lush string orchestra, and gentle woodwinds. Perfect for arriving at destination. High quality orchestral production, emotional and heartfelt.'
+    description: 'This is phase Ending of ONE continuous cinematic-electronic driving soundtrack suite. Keep the same sonic identity, instruments family, and tonal color as the other phases. Only change intensity. Return to sparse piano and pads, resolving tension. Outro of the same soundtrack.',
+    phaseRole: 'outro - returning to minimal, resolving theme'
   }
 }
 
 export const ROAD_EVENT_MUSIC_CONFIGS: Record<string, MusicStyleConfig> = {
   rain: {
     style: 'Rain',
-    instruments: ['soft piano', 'rain sounds', 'ambient pads'],
-    mood: 'calm, contemplative, soothing',
-    genre: 'ambient, new age',
-    tempo: 65,
-    energy: 20,
-    description: 'Relaxing music for rainy day driving'
+    instruments: [...SHARED_SONIC_IDENTITY.coreInstruments],
+    mood: 'calming, softer, wet atmosphere',
+    genre: SHARED_SONIC_IDENTITY.genreFamily,
+    tempo: 60,
+    energy: 18,
+    description: 'This is a rain variation of ONE continuous cinematic-electronic driving soundtrack suite. Keep the SAME sonic identity as the base journey phases. Same instruments family, same tonal color. Only add wetter, softer atmosphere. Lower energy.',
+    phaseRole: 'environmental variation - rain'
   },
   night: {
     style: 'Night',
-    instruments: ['synth pads', 'electronic beats', 'ambient textures'],
-    mood: 'mysterious, calm, atmospheric',
-    genre: 'ambient, electronic',
-    tempo: 80,
-    energy: 30,
-    description: 'Moody atmospheric night driving music'
+    instruments: [...SHARED_SONIC_IDENTITY.coreInstruments],
+    mood: 'darker, mysterious, atmospheric',
+    genre: SHARED_SONIC_IDENTITY.genreFamily,
+    tempo: 90,
+    energy: 35,
+    description: 'This is a night variation of ONE continuous cinematic-electronic driving soundtrack suite. Keep the SAME sonic identity as the base journey phases. Same instruments family, same tonal color. Only use darker pads, slightly lower brightness.',
+    phaseRole: 'environmental variation - night'
   },
   traffic: {
     style: 'Traffic',
-    instruments: ['chill piano', 'subtle beats', 'mellow pads'],
-    mood: 'patient, calm, relaxed',
-    genre: 'lo-fi, chillhop',
-    tempo: 75,
-    energy: 25,
-    description: 'Calm music for traffic conditions'
+    instruments: [...SHARED_SONIC_IDENTITY.coreInstruments],
+    mood: 'patient, slowed, sparse',
+    genre: SHARED_SONIC_IDENTITY.genreFamily,
+    tempo: 70,
+    energy: 22,
+    description: 'This is a traffic variation of ONE continuous cinematic-electronic driving soundtrack suite. Keep the SAME sonic identity as the base journey phases. Same instruments family, same tonal color. Only slower tempo, sparser arrangement.',
+    phaseRole: 'environmental variation - traffic'
   },
   construction: {
     style: 'Construction',
-    instruments: ['slow synth', 'cautious rhythm', 'warning tones'],
-    mood: 'careful, alert, steady',
-    genre: 'electronic, ambient',
-    tempo: 85,
-    energy: 35,
-    description: 'Careful driving music for construction zones'
+    instruments: [...SHARED_SONIC_IDENTITY.coreInstruments],
+    mood: 'cautious, careful, alert',
+    genre: SHARED_SONIC_IDENTITY.genreFamily,
+    tempo: 75,
+    energy: 25,
+    description: 'This is a construction zone variation of ONE continuous cinematic-electronic driving soundtrack suite. Keep the SAME sonic identity as the base journey phases. Same instruments family, same tonal color. More cautious feel, lower energy.',
+    phaseRole: 'environmental variation - construction'
   },
   accident: {
     style: 'Accident',
-    instruments: ['somber piano', 'string section', 'muted beats'],
-    mood: 'somber, cautious, alert',
-    genre: 'ambient, cinematic',
-    tempo: 60,
-    energy: 20,
-    description: 'Somber music for accident scenes'
+    instruments: [...SHARED_SONIC_IDENTITY.coreInstruments],
+    mood: 'somber, cautious, reflective',
+    genre: SHARED_SONIC_IDENTITY.genreFamily,
+    tempo: 55,
+    energy: 15,
+    description: 'This is an accident scene variation of ONE continuous cinematic-electronic driving soundtrack suite. Keep the SAME sonic identity as the base journey phases. Same instruments family, same tonal color. Very sparse, somber, cautious.',
+    phaseRole: 'environmental variation - accident'
   },
   mountain: {
     style: 'Mountain',
-    instruments: ['acoustic guitar', 'orchestra', 'epic drums'],
-    mood: 'epic, inspiring, adventurous',
-    genre: 'cinematic, folk',
-    tempo: 105,
-    energy: 65,
-    description: 'Epic music for mountain driving'
+    instruments: [...SHARED_SONIC_IDENTITY.coreInstruments, 'airy textures'],
+    mood: 'elevated, expansive, adventurous',
+    genre: SHARED_SONIC_IDENTITY.genreFamily,
+    tempo: 120,
+    energy: 75,
+    description: 'This is a mountain driving variation of ONE continuous cinematic-electronic driving soundtrack suite. Keep the SAME sonic identity as the base journey phases. Same instruments family, same tonal color. Higher energy, slightly faster tempo, airy textures.',
+    phaseRole: 'environmental variation - mountain'
   },
   highway: {
     style: 'Highway',
-    instruments: ['electric guitar', 'driving bass', 'powerful drums', 'synths'],
-    mood: 'energetic, free, driving',
-    genre: 'rock, synthwave',
+    instruments: [...SHARED_SONIC_IDENTITY.coreInstruments, 'soft arpeggio', 'filtered drums'],
+    mood: 'energetic, flowing, free',
+    genre: SHARED_SONIC_IDENTITY.genreFamily,
     tempo: 130,
-    energy: 80,
-    description: 'High-energy driving music for highways'
+    energy: 85,
+    description: 'This is a highway driving variation of ONE continuous cinematic-electronic driving soundtrack suite. Keep the SAME sonic identity as the base journey phases. Same instruments family, same tonal color. Higher energy, faster tempo, confident groove.',
+    phaseRole: 'environmental variation - highway'
   },
   clear: {
     style: 'Clear',
-    instruments: ['bright piano', 'upbeat drums', 'positive synths'],
-    mood: 'positive, energetic, optimistic',
-    genre: 'pop, electronic',
-    tempo: 100,
+    instruments: [...SHARED_SONIC_IDENTITY.coreInstruments, 'soft arpeggio'],
+    mood: 'bright, positive, clear',
+    genre: SHARED_SONIC_IDENTITY.genreFamily,
+    tempo: 110,
     energy: 60,
-    description: 'Bright music for clear weather driving'
+    description: 'This is a clear weather variation of ONE continuous cinematic-electronic driving soundtrack suite. Keep the SAME sonic identity as the base journey phases. Same instruments family, same tonal color. Return to baseline cruise intensity.',
+    phaseRole: 'environmental variation - clear'
   }
 }
 
@@ -251,15 +274,22 @@ export interface CustomMusicSettings {
   instruments: string[]
   genre: string
   mood: string
-  energy: number
-  tempo: number
+  baseEnergy: number
+  baseTempo: number
 }
 
 export const getCustomMusicSettings = (): CustomMusicSettings | null => {
   try {
     const stored = localStorage.getItem('drivescore-custom-music-settings')
     if (stored) {
-      return JSON.parse(stored)
+      const parsed = JSON.parse(stored)
+      return {
+        instruments: parsed.instruments || [],
+        genre: parsed.genre || SHARED_SONIC_IDENTITY.genreFamily,
+        mood: parsed.mood || 'cinematic, driving',
+        baseEnergy: parsed.energy || SHARED_SONIC_IDENTITY.baseEnergy,
+        baseTempo: parsed.tempo || SHARED_SONIC_IDENTITY.baseTempo
+      }
     }
   } catch {
     return null
@@ -267,17 +297,67 @@ export const getCustomMusicSettings = (): CustomMusicSettings | null => {
   return null
 }
 
+const PHASE_INTENSITY_MULTIPLIERS: Record<string, { tempo: number; energy: number }> = {
+  calm: { tempo: 0.65, energy: 0.4 },
+  build: { tempo: 0.95, energy: 0.9 },
+  cruise: { tempo: 1.15, energy: 1.3 },
+  peak: { tempo: 1.35, energy: 1.8 },
+  ending: { tempo: 0.70, energy: 0.6 }
+}
+
 export const buildPrompt = (config: MusicStyleConfig): string => {
   const customSettings = getCustomMusicSettings()
   
-  const instruments = customSettings?.instruments.length 
-    ? customSettings.instruments.join(', ') 
+  const sharedInstruments = customSettings?.instruments.length
+    ? customSettings.instruments.join(', ')
     : config.instruments.join(', ')
   
-  const genre = customSettings?.genre || config.genre
   const mood = customSettings?.mood || config.mood
-  const energy = customSettings?.energy ?? config.energy
-  const tempo = customSettings?.tempo ?? config.tempo
   
-  return `${config.description}. Genre: ${genre}. Mood: ${mood}. Instruments: ${instruments}. Tempo: ${tempo} BPM. Energy level: ${energy}/100. High quality production, suitable for driving background music.`
+  let tempo = config.tempo
+  let energy = config.energy
+  
+  if (customSettings) {
+    const multiplier = PHASE_INTENSITY_MULTIPLIERS[config.style.toLowerCase()]
+    if (multiplier) {
+      tempo = Math.round(customSettings.baseTempo * multiplier.tempo)
+      energy = Math.min(95, Math.round(customSettings.baseEnergy * multiplier.energy))
+    }
+  }
+
+  const negativeConstraints = [
+    'no vocals',
+    'no genre jumps',
+    'no distorted guitars',
+    'no trailer brass',
+    'no lo-fi hiphop',
+    'no folk acoustic',
+    'no heavy metal',
+    'no orchestral trailer takeover',
+    'no progressive house drop'
+  ]
+
+  return `Create phase "${config.style}" of ONE continuous cinematic-electronic driving soundtrack suite. 
+Keep the SAME sonic identity across all journey phases. 
+Shared palette: ${sharedInstruments}. 
+This phase role: ${config.phaseRole}. 
+Tempo: ${tempo} BPM. 
+Energy: ${energy}/100. 
+Mood: ${mood}. 
+Make it sound like a variation of the same theme, not a different song. 
+Instrumental only, seamless loop-friendly, clean mix, suitable as in-car background music. 
+Avoid: ${negativeConstraints.join(', ')}.
+${config.description}`.replace(/\n/g, ' ')
 }
+
+export const generateJourneySeed = (routeInput: string): number => {
+  let hash = 0
+  for (let i = 0; i < routeInput.length; i++) {
+    const char = routeInput.charCodeAt(i)
+    hash = ((hash << 5) - hash) + char
+    hash = hash & hash
+  }
+  return Math.abs(hash) % 1000000
+}
+
+export { SHARED_SONIC_IDENTITY }
