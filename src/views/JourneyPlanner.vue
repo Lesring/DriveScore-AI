@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { MapPin, Navigation, ChevronDown, Music, Clock, Zap, AlertCircle, RefreshCw } from 'lucide-vue-next'
+import { MapPin, Navigation, ChevronDown, Music, Clock, Zap, AlertCircle, RefreshCw, Guitar, Music2, Smile, Settings } from 'lucide-vue-next'
 import NavBar from '@/components/NavBar.vue'
 import type { JourneyBlueprint } from '@/types'
 import ComposerPanel from '@/components/ComposerPanel.vue'
@@ -22,10 +22,70 @@ const showCache = ref(false)
 const aiAnalysis = ref<RouteAnalysis | null>(null)
 const aiMusicGeneration = ref<MusicGeneration | null>(null)
 const errorMessage = ref<string | null>(null)
-const analysisSource = ref<'ai' | 'fallback'>('ai')
-const musicSource = ref<'ai' | 'fallback'>('ai')
-
-const generateBlueprint = async () => {
+  const analysisSource = ref<'ai' | 'fallback'>('ai')
+  const musicSource = ref<'ai' | 'fallback'>('ai')
+  
+  const isMusicSettingsExpanded = ref(false)
+  
+  const availableInstruments = [
+    'piano', 'guitar', 'synthesizer', 'drums', 'bass', 'strings',
+    'pads', 'arpeggio', 'percussion', 'orchestra', 'acoustic guitar',
+    'electric guitar', 'violin', 'cello', 'flute', 'saxophone', 'trumpet'
+  ]
+  
+  const availableGenres = [
+    'ambient', 'electronic', 'rock', 'pop', 'classical', 'cinematic',
+    'synthwave', 'lo-fi', 'chillhop', 'new age', 'progressive', 'folk'
+  ]
+  
+  const availableMoods = [
+    'relaxing', 'energetic', 'peaceful', 'intense', 'hopeful', 'mysterious',
+    'positive', 'somber', 'epic', 'calm', 'driving', 'serene'
+  ]
+  
+  const selectedInstruments = ref<string[]>(['piano', 'synthesizer', 'pads'])
+  const selectedGenre = ref('electronic')
+  const selectedMood = ref('driving')
+  const energyLevel = ref(50)
+  const tempoBpm = ref(100)
+  
+  const toggleMusicSettings = () => {
+    isMusicSettingsExpanded.value = !isMusicSettingsExpanded.value
+  }
+  
+  const toggleInstrument = (instrument: string) => {
+    const index = selectedInstruments.value.indexOf(instrument)
+    if (index > -1) {
+      selectedInstruments.value.splice(index, 1)
+    } else if (selectedInstruments.value.length < 5) {
+      selectedInstruments.value.push(instrument)
+    }
+  }
+  
+  const saveCustomSettings = () => {
+    const customSettings = {
+      instruments: selectedInstruments.value,
+      genre: selectedGenre.value,
+      mood: selectedMood.value,
+      energy: energyLevel.value,
+      tempo: tempoBpm.value
+    }
+    localStorage.setItem('drivescore-custom-music-settings', JSON.stringify(customSettings))
+  }
+  
+  const resetMusicSettings = () => {
+    selectedInstruments.value = ['piano', 'synthesizer', 'pads']
+    selectedGenre.value = 'electronic'
+    selectedMood.value = 'driving'
+    energyLevel.value = 50
+    tempoBpm.value = 100
+  }
+  
+  watch([selectedInstruments, selectedGenre, selectedMood, energyLevel, tempoBpm], () => {
+    saveCustomSettings()
+  })
+  
+  const generateBlueprint = async () => {
   if (!startPoint.value || !endPoint.value) return
   
   isGenerating.value = true
@@ -220,6 +280,127 @@ const energyColor = (energy: number) => {
         </div>
         
         <button 
+          @click="toggleMusicSettings"
+          class="w-full mb-4 flex items-center justify-center gap-2 py-3 text-sm text-primary hover:text-primary-light transition-colors"
+        >
+          <Settings class="w-4 h-4" />
+          <span>{{ isMusicSettingsExpanded ? 'Hide Music Settings' : 'Customize AI Music' }}</span>
+        </button>
+        
+        <Transition name="expand">
+          <div v-if="isMusicSettingsExpanded" class="pb-6">
+            <div class="glass-card p-6">
+              <div class="flex items-center gap-2 mb-4">
+                <Music2 class="w-4 h-4 text-primary" />
+                <span class="text-primary-theme font-semibold text-sm">AI Music Customization</span>
+              </div>
+              
+              <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <div class="flex items-center gap-2 mb-2">
+                    <Guitar class="w-3.5 h-3.5 text-primary" />
+                    <span class="text-muted-theme text-xs uppercase tracking-wider">Instruments</span>
+                  </div>
+                  <div class="flex flex-wrap gap-2">
+                    <button
+                      v-for="instrument in availableInstruments"
+                      :key="instrument"
+                      @click="toggleInstrument(instrument)"
+                      :class="[
+                        'px-2 py-1 rounded-full text-xs transition-colors',
+                        selectedInstruments.includes(instrument)
+                          ? 'bg-primary/20 text-primary border border-primary/40'
+                          : 'bg-glass-bg text-secondary-theme hover:bg-glass-border border border-transparent'
+                      ]"
+                    >
+                      {{ instrument }}
+                    </button>
+                  </div>
+                </div>
+                
+                <div>
+                  <div class="flex items-center gap-2 mb-2">
+                    <Music2 class="w-3.5 h-3.5 text-primary" />
+                    <span class="text-muted-theme text-xs uppercase tracking-wider">Genre</span>
+                  </div>
+                  <select
+                    v-model="selectedGenre"
+                    class="w-full bg-glass-bg border border-glass-border rounded-lg px-3 py-2 text-sm text-primary-theme focus:outline-none focus:border-primary"
+                  >
+                    <option v-for="genre in availableGenres" :key="genre" :value="genre">
+                      {{ genre }}
+                    </option>
+                  </select>
+                </div>
+                
+                <div>
+                  <div class="flex items-center gap-2 mb-2">
+                    <Smile class="w-3.5 h-3.5 text-primary" />
+                    <span class="text-muted-theme text-xs uppercase tracking-wider">Mood</span>
+                  </div>
+                  <select
+                    v-model="selectedMood"
+                    class="w-full bg-glass-bg border border-glass-border rounded-lg px-3 py-2 text-sm text-primary-theme focus:outline-none focus:border-primary"
+                  >
+                    <option v-for="mood in availableMoods" :key="mood" :value="mood">
+                      {{ mood }}
+                    </option>
+                  </select>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <div class="flex items-center justify-between mb-2">
+                      <div class="flex items-center gap-2">
+                        <Zap class="w-3.5 h-3.5 text-primary" />
+                        <span class="text-muted-theme text-xs uppercase tracking-wider">Energy</span>
+                      </div>
+                      <span class="text-primary-theme text-sm font-mono">{{ energyLevel }}%</span>
+                    </div>
+                    <input
+                      v-model="energyLevel"
+                      type="range"
+                      min="10"
+                      max="100"
+                      class="w-full h-2 bg-glass-border rounded-full appearance-none cursor-pointer accent-primary"
+                    />
+                  </div>
+                  
+                  <div>
+                    <div class="flex items-center justify-between mb-2">
+                      <div class="flex items-center gap-2">
+                        <Clock class="w-3.5 h-3.5 text-primary" />
+                        <span class="text-muted-theme text-xs uppercase tracking-wider">Tempo</span>
+                      </div>
+                      <span class="text-primary-theme text-sm font-mono">{{ tempoBpm }} BPM</span>
+                    </div>
+                    <input
+                      v-model="tempoBpm"
+                      type="range"
+                      min="60"
+                      max="180"
+                      class="w-full h-2 bg-glass-border rounded-full appearance-none cursor-pointer accent-primary"
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <div class="mt-4 flex items-center justify-between">
+                <span class="text-muted-theme text-xs">
+                  Selected: {{ selectedInstruments.join(', ') }} | {{ selectedGenre }} | {{ selectedMood }}
+                </span>
+                <button
+                  @click="resetMusicSettings"
+                  class="text-xs text-primary hover:text-primary-light transition-colors"
+                >
+                  Reset to Default
+                </button>
+              </div>
+            </div>
+          </div>
+        </Transition>
+        
+        <button 
           @click="generateBlueprint"
           :disabled="!startPoint || !endPoint || isGenerating"
           class="w-full glass-button text-lg flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -389,3 +570,23 @@ const energyColor = (energy: number) => {
     </main>
   </div>
 </template>
+
+<style scoped>
+.expand-enter-active,
+.expand-leave-active {
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.expand-enter-from,
+.expand-leave-to {
+  opacity: 0;
+  max-height: 0;
+  padding-bottom: 0;
+}
+
+.expand-enter-to,
+.expand-leave-from {
+  max-height: 600px;
+}
+</style>

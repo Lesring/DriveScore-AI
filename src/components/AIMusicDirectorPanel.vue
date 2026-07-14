@@ -96,7 +96,7 @@ const getKey = () => {
         
         <div class="space-y-2 text-sm">
           <div class="flex items-center gap-2">
-            <div class="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></div>
+            <div class="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
             <span class="text-primary-theme">Thinking...</span>
           </div>
           <div class="flex justify-between">
@@ -140,7 +140,7 @@ const getKey = () => {
             />
             <Loader2 
               v-else 
-              class="w-4 h-4 text-blue-400 animate-spin" 
+              class="w-4 h-4 text-primary animate-spin" 
             />
             <span :class="item.status === 'cached' ? 'text-primary-theme' : 'text-muted-theme'">
               {{ item.id }}

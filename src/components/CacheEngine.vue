@@ -88,10 +88,10 @@ const getSegmentStatus = (segmentId: string) => {
       <div class="flex items-center gap-2">
         <Loader2 
           v-if="isLoading" 
-          class="w-4 h-4 text-blue-400 animate-spin" 
+          class="w-4 h-4 text-primary animate-spin" 
         />
         <Check v-else class="w-4 h-4 text-green-400" />
-        <span :class="isLoading ? 'text-blue-400' : 'text-green-400'" class="text-sm">
+        <span :class="isLoading ? 'text-primary' : 'text-green-400'" class="text-sm">
           {{ isLoading ? 'Preloading...' : 'Ready' }}
         </span>
       </div>
@@ -124,7 +124,7 @@ const getSegmentStatus = (segmentId: string) => {
           :class="{
             'bg-green-500/20': getSegmentStatus(segment.id) === 'cached',
             'bg-red-500/20': getSegmentStatus(segment.id) === 'failed',
-            'bg-blue-500/20': getSegmentStatus(segment.id) === 'loading',
+            'bg-primary/20': getSegmentStatus(segment.id) === 'loading',
             'bg-glass-bg': getSegmentStatus(segment.id) === 'available'
           }"
         >
@@ -139,7 +139,7 @@ const getSegmentStatus = (segmentId: string) => {
             />
             <Loader2 
               v-else-if="getSegmentStatus(segment.id) === 'loading'" 
-              class="w-4 h-4 text-blue-400 animate-spin" 
+              class="w-4 h-4 text-primary animate-spin" 
             />
             <div v-else class="w-4 h-4 bg-glass-border rounded"></div>
             
@@ -147,7 +147,7 @@ const getSegmentStatus = (segmentId: string) => {
               :class="{
                 'text-primary-theme': getSegmentStatus(segment.id) === 'cached',
                 'text-red-400': getSegmentStatus(segment.id) === 'failed',
-                'text-blue-400': getSegmentStatus(segment.id) === 'loading',
+                'text-primary': getSegmentStatus(segment.id) === 'loading',
                 'text-muted-theme': getSegmentStatus(segment.id) === 'available'
               }"
             >
@@ -182,7 +182,7 @@ const getSegmentStatus = (segmentId: string) => {
           </span>
           <span 
             v-else-if="getSegmentStatus(segment.id) === 'loading'"
-            class="text-blue-400 text-xs"
+            class="text-primary text-xs"
           >
             Loading...
           </span>

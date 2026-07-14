@@ -33,7 +33,7 @@ export function useStableAudio() {
   })
 
   const hasApiKey = computed(() => {
-    return import.meta.env.STABILITY_API_KEY && import.meta.env.STABILITY_API_KEY.length > 0
+    return import.meta.env.VITE_STABILITY_API_KEY && import.meta.env.VITE_STABILITY_API_KEY.length > 0
   })
 
   const checkApiKey = () => {

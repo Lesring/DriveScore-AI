@@ -7,6 +7,7 @@ import { audioManager, type AudioSource } from '@/audio/AudioManager'
 import { useJourneySession } from '@/composables/useJourneySession'
 import { ROAD_EVENT_MAPPING, type RoadAction } from '@/composables/useRoadSimulator'
 import { useStableAudio } from '@/composables/useStableAudio'
+import { DEFAULT_MUSIC_STYLE_CONFIGS } from '@/api/stableAudio'
 
 const fallbackMusicSegments: MusicSegment[] = [
   { id: 'Calm_01', style: 'Calm', energy: 25, tempo: 65, key: 'C Major', duration: 180, progress: 100, emotion: 'Relax', reason: 'Demo data - Urban driving requires calm music', audioUrl: getAudioUrlForStyle('Calm') },
@@ -59,6 +60,69 @@ export function useDrivingSimulation() {
   let predictInterval: number | null = null
   let lastMusicStyle = ''
   let musicChangesCount = 0
+  let generatedMusicCache: Record<string, string> = {}
+
+  const loadMusicCache = () => {
+    try {
+      const cached = localStorage.getItem('drivescore-music-cache')
+      if (cached) {
+        generatedMusicCache = JSON.parse(cached)
+      }
+    } catch {
+      generatedMusicCache = {}
+    }
+  }
+
+  const saveMusicCache = () => {
+    localStorage.setItem('drivescore-music-cache', JSON.stringify(generatedMusicCache))
+  }
+
+  const hasCachedMusic = (style: string): boolean => {
+    return !!generatedMusicCache[style.toLowerCase()]
+  }
+
+  const getCachedMusicUrl = (style: string): string | undefined => {
+    return generatedMusicCache[style.toLowerCase()]
+  }
+
+  const setCachedMusicUrl = (style: string, url: string) => {
+    generatedMusicCache[style.toLowerCase()] = url
+    saveMusicCache()
+  }
+
+  const preGenerateAllMusic = async (): Promise<boolean> => {
+    if (!hasApiKey.value) {
+      console.log('[DrivingSimulation] No API key configured, skipping AI generation')
+      return false
+    }
+
+    const stylesToGenerate = Object.keys(DEFAULT_MUSIC_STYLE_CONFIGS)
+    let allGenerated = true
+
+    loadMusicCache()
+
+    for (const style of stylesToGenerate) {
+      if (hasCachedMusic(style)) {
+        console.log(`[DrivingSimulation] Music for ${style} already cached`)
+        continue
+      }
+
+      console.log(`[DrivingSimulation] Generating AI music for ${style}...`)
+      const generated = await generateForStyle(style, { duration: 30 })
+      
+      if (generated) {
+        setCachedMusicUrl(style, generated.url)
+        console.log(`[DrivingSimulation] Successfully generated ${style}: ${generated.url}`)
+      } else {
+        console.warn(`[DrivingSimulation] Failed to generate ${style}, will use fallback`)
+        allGenerated = false
+      }
+    }
+
+    return allGenerated
+  }
+
+  loadMusicCache()
 
   for (let i = 0; i < 30; i++) {
     particles.value.push({
@@ -115,23 +179,38 @@ export function useDrivingSimulation() {
     if (!segment) return
 
     let audioSource: AudioSource
+    let aiGenerated = false
 
     if (hasApiKey.value) {
-      const generatedAudio = getGeneratedForStyle(segment.style)
-      if (generatedAudio) {
+      const cachedUrl = getCachedMusicUrl(segment.style)
+      if (cachedUrl) {
         audioSource = {
-          id: `ai_${generatedAudio.id}`,
+          id: `cached_${segment.style}`,
           type: 'ai-generated',
-          url: generatedAudio.url,
+          url: cachedUrl,
           segment,
           aiGenerated: true
         }
+        aiGenerated = true
       } else {
-        audioSource = {
-          id: segment.id,
-          type: segment.audioUrl ? 'url' : 'synthesized',
-          url: segment.audioUrl,
-          segment
+        const generatedAudio = getGeneratedForStyle(segment.style)
+        if (generatedAudio) {
+          setCachedMusicUrl(segment.style, generatedAudio.url)
+          audioSource = {
+            id: `ai_${generatedAudio.id}`,
+            type: 'ai-generated',
+            url: generatedAudio.url,
+            segment,
+            aiGenerated: true
+          }
+          aiGenerated = true
+        } else {
+          audioSource = {
+            id: segment.id,
+            type: segment.audioUrl ? 'url' : 'synthesized',
+            url: segment.audioUrl,
+            segment
+          }
         }
       }
     } else {
@@ -143,6 +222,7 @@ export function useDrivingSimulation() {
       }
     }
 
+    console.log(`[DrivingSimulation] Playing ${segment.style} (${aiGenerated ? 'AI Generated' : 'Fallback'})`)
     await audioManager.play(audioSource, { fadeIn: 1500, loop: true })
     currentMusicSegment.value = segment
     musicChangesCount++
@@ -175,30 +255,45 @@ export function useDrivingSimulation() {
       const segment = getMusicSegmentForStyle(target.musicStyle)
       if (segment) {
         let audioSource: AudioSource
+        let aiGenerated = false
 
         if (hasApiKey.value) {
-          let generatedAudio = target.eventType 
-            ? getGeneratedForEvent(target.eventType) 
-            : getGeneratedForStyle(target.musicStyle)
-          
-          if (!generatedAudio) {
-            generatedAudio = getGeneratedForStyle(target.musicStyle)
-          }
-
-          if (generatedAudio) {
+          const cachedUrl = getCachedMusicUrl(target.musicStyle)
+          if (cachedUrl) {
             audioSource = {
-              id: `ai_${generatedAudio.id}`,
+              id: `cached_${target.musicStyle}`,
               type: 'ai-generated',
-              url: generatedAudio.url,
+              url: cachedUrl,
               segment,
               aiGenerated: true
             }
+            aiGenerated = true
           } else {
-            audioSource = {
-              id: segment.id,
-              type: segment.audioUrl ? 'url' : 'synthesized',
-              url: segment.audioUrl,
-              segment
+            let generatedAudio = target.eventType 
+              ? getGeneratedForEvent(target.eventType) 
+              : getGeneratedForStyle(target.musicStyle)
+            
+            if (!generatedAudio) {
+              generatedAudio = getGeneratedForStyle(target.musicStyle)
+            }
+
+            if (generatedAudio) {
+              setCachedMusicUrl(target.musicStyle, generatedAudio.url)
+              audioSource = {
+                id: `ai_${generatedAudio.id}`,
+                type: 'ai-generated',
+                url: generatedAudio.url,
+                segment,
+                aiGenerated: true
+              }
+              aiGenerated = true
+            } else {
+              audioSource = {
+                id: segment.id,
+                type: segment.audioUrl ? 'url' : 'synthesized',
+                url: segment.audioUrl,
+                segment
+              }
             }
           }
         } else {
@@ -210,6 +305,7 @@ export function useDrivingSimulation() {
           }
         }
 
+        console.log(`[DrivingSimulation] Override to ${target.musicStyle} (${aiGenerated ? 'AI Generated' : 'Fallback'})`)
         await audioManager.crossfadeTo(audioSource, 1000)
         currentMusicSegment.value = segment
       }
@@ -249,13 +345,25 @@ export function useDrivingSimulation() {
     stop()
   })
 
-  const startDriving = () => {
+  const startDriving = async (shouldPreGenerate: boolean = true) => {
     musicSegments.value = session.musicSegments.length > 0 
       ? session.musicSegments 
       : fallbackMusicSegments
     
     if (session.musicSegments.length === 0) {
       console.warn('[DrivingSimulation] Using fallback music segments - no session data available')
+    }
+    
+    if (shouldPreGenerate && hasApiKey.value) {
+      const stylesToCheck = ['Calm', 'Build', 'Cruise', 'Peak', 'Ending']
+      const needsGeneration = stylesToCheck.some(style => !hasCachedMusic(style))
+      
+      if (needsGeneration) {
+        console.log('[DrivingSimulation] Pre-generating AI music segments...')
+        await preGenerateAllMusic()
+      } else {
+        console.log('[DrivingSimulation] All music segments already cached')
+      }
     }
     
     isDriving.value = true
@@ -282,7 +390,20 @@ export function useDrivingSimulation() {
       }
     }, 3000)
     
-    audioManager.resume()
+    await audioManager.resume()
+    
+    const preloadSources = musicSegments.value.map(segment => {
+      const cachedUrl = hasApiKey.value ? getCachedMusicUrl(segment.style) : null
+      return {
+        id: segment.id,
+        type: 'url' as const,
+        url: cachedUrl || segment.audioUrl,
+        segment
+      }
+    })
+    const preloadResult = await audioManager.preload(preloadSources)
+    console.log('[DrivingSimulation] Audio preload result:', preloadResult)
+    
     animate()
   }
 
@@ -311,23 +432,38 @@ export function useDrivingSimulation() {
       const predictedSegment = getMusicSegmentForStyle(prediction.expectedMusic)
       if (predictedSegment && predictedSegment.id !== currentMusicSegment.value?.id) {
         let audioSource: AudioSource
+        let aiGenerated = false
 
         if (hasApiKey.value) {
-          const generatedAudio = getGeneratedForStyle(predictedSegment.style)
-          if (generatedAudio) {
+          const cachedUrl = getCachedMusicUrl(predictedSegment.style)
+          if (cachedUrl) {
             audioSource = {
-              id: `ai_${generatedAudio.id}`,
+              id: `cached_${predictedSegment.style}`,
               type: 'ai-generated',
-              url: generatedAudio.url,
+              url: cachedUrl,
               segment: predictedSegment,
               aiGenerated: true
             }
+            aiGenerated = true
           } else {
-            audioSource = {
-              id: predictedSegment.id,
-              type: predictedSegment.audioUrl ? 'url' : 'synthesized',
-              url: predictedSegment.audioUrl,
-              segment: predictedSegment
+            const generatedAudio = getGeneratedForStyle(predictedSegment.style)
+            if (generatedAudio) {
+              setCachedMusicUrl(predictedSegment.style, generatedAudio.url)
+              audioSource = {
+                id: `ai_${generatedAudio.id}`,
+                type: 'ai-generated',
+                url: generatedAudio.url,
+                segment: predictedSegment,
+                aiGenerated: true
+              }
+              aiGenerated = true
+            } else {
+              audioSource = {
+                id: predictedSegment.id,
+                type: predictedSegment.audioUrl ? 'url' : 'synthesized',
+                url: predictedSegment.audioUrl,
+                segment: predictedSegment
+              }
             }
           }
         } else {
@@ -339,6 +475,7 @@ export function useDrivingSimulation() {
           }
         }
 
+        console.log(`[DrivingSimulation] Crossfading to ${predictedSegment.style} (${aiGenerated ? 'AI Generated' : 'Fallback'})`)
         await audioManager.crossfadeTo(audioSource, 1500)
         currentMusicSegment.value = predictedSegment
         musicChangesCount++
@@ -413,6 +550,7 @@ export function useDrivingSimulation() {
       if (drivingData.value.musicStyle !== lastMusicStyle && drivingData.value.state !== 'parking') {
         lastMusicStyle = drivingData.value.musicStyle
         playMusicForState(drivingData.value.state)
+        console.log('[DrivingSimulation] Playing music for state:', drivingData.value.state, 'style:', lastMusicStyle)
       }
     }
 

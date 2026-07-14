@@ -343,8 +343,8 @@ const speedChartOption = computed(() => generateChartOption(speedData.value, '#d
           style="animation-delay: 0.3s"
         >
           <div class="flex items-center gap-4 mb-4">
-            <div class="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
-              <Music class="w-6 h-6 text-purple-400" />
+            <div class="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
+              <Music class="w-6 h-6 text-primary" />
             </div>
             <div>
               <h3 class="text-primary-theme font-semibold">Average Tempo</h3>
@@ -363,8 +363,8 @@ const speedChartOption = computed(() => generateChartOption(speedData.value, '#d
           style="animation-delay: 0.4s"
         >
           <div class="flex items-center gap-4 mb-4">
-            <div class="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
-              <Target class="w-6 h-6 text-blue-400" />
+            <div class="w-12 h-12 rounded-xl bg-secondary/20 flex items-center justify-center">
+              <Target class="w-6 h-6 text-secondary" />
             </div>
             <div>
               <h3 class="text-primary-theme font-semibold">Predictions</h3>

@@ -28,20 +28,20 @@ const aiStatus = computed(() => session.aiStatus)
 <template>
   <div class="glass-card p-5 backdrop-blur-xl border-glass-border">
     <div class="flex items-center gap-2 mb-4 pb-3 border-b border-glass-border">
-      <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
         <Compass class="w-5 h-5 text-white" />
       </div>
       <span class="text-primary-theme font-semibold">AI Prediction</span>
       <Loader2 
         v-if="isPredicting" 
-        class="w-4 h-4 text-blue-400 animate-spin ml-auto" 
+        class="w-4 h-4 text-primary animate-spin ml-auto" 
       />
     </div>
     
     <div class="flex items-center gap-2 mb-4">
       <span 
         v-if="aiStatus === 'loading'"
-        class="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400"
+        class="text-xs px-2 py-0.5 rounded-full bg-primary/20 text-primary"
       >
         Loading
       </span>
@@ -123,7 +123,7 @@ const aiStatus = computed(() => session.aiStatus)
           :class="{
             'bg-green-500/20': cacheStatus.status === 'ready',
             'bg-yellow-500/20 animate-pulse': cacheStatus.status === 'switching',
-            'bg-blue-500/20': cacheStatus.status === 'loading'
+            'bg-primary/20': cacheStatus.status === 'loading'
           }"
         >
           <Download 
@@ -136,13 +136,13 @@ const aiStatus = computed(() => session.aiStatus)
           />
           <Brain 
             v-else 
-            class="w-4 h-4 text-blue-400" 
+            class="w-4 h-4 text-primary" 
           />
           <span 
             :class="{
               'text-green-400': cacheStatus.status === 'ready',
               'text-yellow-400': cacheStatus.status === 'switching',
-              'text-blue-400': cacheStatus.status === 'loading'
+              'text-primary': cacheStatus.status === 'loading'
             }"
           >
             {{ cacheStatus.text }}

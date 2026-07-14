@@ -47,7 +47,7 @@ export const initializeAI = async (): Promise<void> => {
   }
   
   isInitializing = true
-  initPromise = new Promise(async (resolve, reject) => {
+  initPromise = new Promise(async (resolve) => {
     try {
       if (config.provider === 'openai-compatible' && config.apiKey) {
         textGenerator = await createOpenAICompatibleGenerator()
@@ -60,8 +60,9 @@ export const initializeAI = async (): Promise<void> => {
       resolve()
     } catch (error) {
       isInitializing = false
-      console.error('Failed to initialize AI:', error)
-      reject(error)
+      textGenerator = null
+      console.warn('AI model initialization failed, falling back to mock data:', error instanceof Error ? error.message : error)
+      resolve()
     }
   })
   
@@ -101,9 +102,10 @@ export const generateText = async (prompt: string, maxRetries = 3): Promise<AIRe
       }
       
       if (!textGenerator) {
+        console.warn('AI model not available, falling back to mock data')
         return {
           data: null,
-          error: 'AI model not initialized',
+          error: null,
           source: 'fallback',
           provider: config.provider
         }

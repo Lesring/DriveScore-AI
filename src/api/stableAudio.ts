@@ -36,48 +36,48 @@ export interface MusicStyleConfig {
 export const DEFAULT_MUSIC_STYLE_CONFIGS: Record<string, MusicStyleConfig> = {
   calm: {
     style: 'Calm',
-    instruments: ['piano', 'soft synthesizer', 'gentle pads'],
-    mood: 'relaxing, peaceful, serene',
-    genre: 'ambient, new age',
-    tempo: 70,
-    energy: 25,
-    description: 'Soft, gentle background music'
+    instruments: ['grand piano', 'warm pad synthesizers', 'soft mallet percussion', 'cello'],
+    mood: 'serene, peaceful, relaxing, meditative',
+    genre: 'ambient, cinematic, neoclassical',
+    tempo: 65,
+    energy: 20,
+    description: 'Beautiful ambient cinematic music with gentle piano arpeggios, warm atmospheric pads, soft mallet percussion, and subtle cello. Perfect for calm urban driving scenes. High quality production, professional mixing, crystal clear audio.'
   },
   build: {
     style: 'Build',
-    instruments: ['synth arpeggio', 'bassline', 'subtle percussion'],
-    mood: 'building, hopeful, anticipatory',
-    genre: 'electronic, progressive',
-    tempo: 100,
-    energy: 50,
-    description: 'Music that builds tension gradually'
+    instruments: ['progression synth arpeggio', 'deep bassline', 'shaker', 'toms', 'subtle hi-hats'],
+    mood: 'hopeful, anticipatory, uplifting, building',
+    genre: 'electronic, progressive house, cinematic',
+    tempo: 95,
+    energy: 45,
+    description: 'Progressive electronic music with rising synth arpeggios, deep pulsing bassline, and subtle percussion. Gradually builds energy and tension. Perfect for accelerating into highway. Professional production, clean mix, wide stereo image.'
   },
   cruise: {
     style: 'Cruise',
-    instruments: ['electric guitar', 'bass guitar', 'drums', 'synthesizer'],
-    mood: 'energetic, driving, upbeat',
-    genre: 'rock, synthwave',
-    tempo: 125,
-    energy: 75,
-    description: 'Mid-tempo driving music for cruising'
+    instruments: ['electric guitar', 'bass guitar', 'tight drum kit', 'analog synthesizer', 'rhythm guitar'],
+    mood: 'energetic, driving, upbeat, confident',
+    genre: 'synthwave, indie rock, electronic rock',
+    tempo: 120,
+    energy: 70,
+    description: 'High-energy synthwave rock music with catchy guitar riffs, driving bassline, tight drums, and retro synthesizers. Perfect for highway cruising at night. Professional production quality, powerful mix, punchy drums.'
   },
   peak: {
     style: 'Peak',
-    instruments: ['heavy drums', 'distorted guitar', 'powerful synths'],
-    mood: 'intense, thrilling, adrenaline',
-    genre: 'rock, electronic',
-    tempo: 145,
-    energy: 95,
-    description: 'High energy peak music'
+    instruments: ['heavy drums', 'distorted guitar', 'powerful synths', 'epic strings', 'sub bass'],
+    mood: 'intense, thrilling, adrenaline, epic',
+    genre: 'electronic rock, cinematic, epic trailer',
+    tempo: 140,
+    energy: 90,
+    description: 'Epic cinematic rock music with thunderous drums, distorted guitars, powerful synthesizers, and orchestral strings. Maximum energy for intense driving moments like overtaking. Professional epic production, massive sound, dramatic build.'
   },
   ending: {
     style: 'Ending',
-    instruments: ['piano', 'orchestra', 'soft strings'],
-    mood: 'peaceful, reflective, calming',
-    genre: 'classical, ambient',
-    tempo: 75,
-    energy: 35,
-    description: 'Gentle conclusion music'
+    instruments: ['grand piano', 'string orchestra', 'soft woodwinds', 'gentle chimes'],
+    mood: 'peaceful, reflective, nostalgic, calming',
+    genre: 'classical, cinematic, ambient',
+    tempo: 70,
+    energy: 30,
+    description: 'Beautiful cinematic conclusion music with emotional piano melody, lush string orchestra, and gentle woodwinds. Perfect for arriving at destination. High quality orchestral production, emotional and heartfelt.'
   }
 }
 
@@ -160,7 +160,7 @@ const API_BASE_URL = 'https://api.stability.ai'
 const API_VERSION = 'v2beta'
 
 const getApiKey = (): string => {
-  return import.meta.env.STABILITY_API_KEY || ''
+  return import.meta.env.VITE_STABILITY_API_KEY || ''
 }
 
 const createHeaders = (): Headers => {
@@ -247,7 +247,37 @@ export const generateAudioWithWait = async (
   return waitForGeneration(initialResponse.id)
 }
 
+export interface CustomMusicSettings {
+  instruments: string[]
+  genre: string
+  mood: string
+  energy: number
+  tempo: number
+}
+
+export const getCustomMusicSettings = (): CustomMusicSettings | null => {
+  try {
+    const stored = localStorage.getItem('drivescore-custom-music-settings')
+    if (stored) {
+      return JSON.parse(stored)
+    }
+  } catch {
+    return null
+  }
+  return null
+}
+
 export const buildPrompt = (config: MusicStyleConfig): string => {
-  const instruments = config.instruments.join(', ')
-  return `${config.description}. Genre: ${config.genre}. Mood: ${config.mood}. Instruments: ${instruments}. Tempo: ${config.tempo} BPM. Energy level: ${config.energy}/100. High quality production, suitable for driving background music.`
+  const customSettings = getCustomMusicSettings()
+  
+  const instruments = customSettings?.instruments.length 
+    ? customSettings.instruments.join(', ') 
+    : config.instruments.join(', ')
+  
+  const genre = customSettings?.genre || config.genre
+  const mood = customSettings?.mood || config.mood
+  const energy = customSettings?.energy ?? config.energy
+  const tempo = customSettings?.tempo ?? config.tempo
+  
+  return `${config.description}. Genre: ${genre}. Mood: ${mood}. Instruments: ${instruments}. Tempo: ${tempo} BPM. Energy level: ${energy}/100. High quality production, suitable for driving background music.`
 }

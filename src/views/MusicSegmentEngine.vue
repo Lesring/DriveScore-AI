@@ -210,7 +210,7 @@ const playSegment = async (id: string) => {
                 />
                 <Loader2 
                   v-else-if="getSegmentStatus(segment.id) === 'loading'" 
-                  class="w-4 h-4 text-blue-400 animate-spin" 
+                  class="w-4 h-4 text-primary animate-spin" 
                 />
                 <ChevronRight 
                   v-else 
@@ -220,9 +220,8 @@ const playSegment = async (id: string) => {
                 <span 
                   :class="{
                     'text-green-400': getSegmentStatus(segment.id) === 'cached',
-                    'text-blue-400': getSegmentStatus(segment.id) === 'loading',
-                    'text-muted-theme': getSegmentStatus(segment.id) === 'available',
-                    'text-primary': getSegmentStatus(segment.id) === 'playing'
+                    'text-primary': getSegmentStatus(segment.id) === 'loading' || getSegmentStatus(segment.id) === 'playing',
+                    'text-muted-theme': getSegmentStatus(segment.id) === 'available'
                   }"
                 >
                   {{ 
@@ -263,7 +262,7 @@ const playSegment = async (id: string) => {
             </div>
             
             <div class="bg-glass-bg rounded-lg p-4">
-              <div class="text-2xl font-bold text-blue-400 mb-1">2</div>
+              <div class="text-2xl font-bold text-primary mb-1">2</div>
               <div class="text-muted-theme text-sm">Loading</div>
             </div>
             

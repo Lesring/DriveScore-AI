@@ -162,7 +162,7 @@ export const analyzeRoute = async (request: AnalyzeRouteRequest): Promise<APIRes
   
   return {
     data: fallbackAnalyzeRoute(request),
-    error: response.error || 'AI generation failed',
+    error: response.error,
     source: 'fallback'
   }
 }
@@ -192,7 +192,7 @@ export const generateMusic = async (request: GenerateMusicRequest): Promise<APIR
   
   return {
     data: fallbackGenerateMusic(),
-    error: response.error || 'AI generation failed',
+    error: response.error,
     source: 'fallback'
   }
 }
@@ -240,7 +240,7 @@ export const predict = async (request: PredictRequest): Promise<APIResult<Predic
   
   return {
     data: fallbackPredict(request),
-    error: response.error || 'AI generation failed',
+    error: response.error,
     source: 'fallback'
   }
 }

@@ -156,11 +156,11 @@ const continueJourney = () => {
           class="w-2 h-2 rounded-full transition-colors duration-300"
           :class="{
             'bg-yellow-400 animate-pulse': currentStatus === 'loading-model',
-            'bg-blue-400 animate-pulse': currentStatus === 'analyzing',
-            'bg-purple-400 animate-pulse': currentStatus === 'generating-music',
+            'bg-secondary animate-pulse': currentStatus === 'analyzing',
+            'bg-primary animate-pulse': currentStatus === 'generating-music',
             'bg-green-400': currentStatus === 'success',
             'bg-red-400': currentStatus === 'error',
-            'bg-blue-400': currentStatus === 'idle'
+            'bg-secondary': currentStatus === 'idle'
           }"
         ></div>
         <span class="text-text-secondary text-sm">
@@ -201,7 +201,7 @@ const continueJourney = () => {
                 </div>
                 
                 <div class="flex items-center gap-3">
-                  <Cloud class="w-5 h-5 text-blue-400 flex-shrink-0" />
+                  <Cloud class="w-5 h-5 text-secondary flex-shrink-0" />
                   <div>
                     <div class="text-muted-theme text-sm">Weather</div>
                     <div class="text-primary-theme font-semibold">{{ missionData.weather }}</div>
@@ -217,7 +217,7 @@ const continueJourney = () => {
                 </div>
                 
                 <div class="flex items-center gap-3">
-                  <Heart class="w-5 h-5 text-pink-400 flex-shrink-0" />
+                  <Heart class="w-5 h-5 text-secondary flex-shrink-0" />
                   <div>
                     <div class="text-muted-theme text-sm">Driver Style</div>
                     <div class="text-primary-theme font-semibold">{{ missionData.driverStyle }}</div>
@@ -322,7 +322,10 @@ const continueJourney = () => {
                   <div class="flex-1">
                     <div 
                       class="font-semibold transition-colors duration-500"
-                      :style="{ color: completedSteps.includes(step.id) ? stepColorMap[step.name] || '#8b5cf6' : '#1a1a1a' }"
+                      :class="{
+                      'text-primary-theme': !completedSteps.includes(step.id),
+                      'text-white': completedSteps.includes(step.id)
+                    }"
                     >
                       {{ step.name }}
                     </div>

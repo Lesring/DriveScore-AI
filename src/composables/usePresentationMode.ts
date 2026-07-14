@@ -65,139 +65,34 @@ const currentStepIndex = ref(0)
 const remainingTime = ref(0)
 const progress = ref(0)
 const isAutoDriving = ref(false)
+const isGeneratingMusic = ref(false)
 
 let stepTimer: number | null = null
 let countdownTimer: number | null = null
 let startTime = 0
 
-const router = useRouter()
+const emitStepChange = (step: PresentationStep, index: number) => {
+  const event = new CustomEvent('presentation-step-change', {
+    detail: { step, index, isPresenting: isPresenting.value }
+  })
+  window.dispatchEvent(event)
+}
+
+const emitPresentationStart = () => {
+  const event = new CustomEvent('presentation-start', {
+    detail: { isPresenting: isPresenting.value }
+  })
+  window.dispatchEvent(event)
+}
+
+const emitPresentationStop = () => {
+  const event = new CustomEvent('presentation-stop', {
+    detail: { isPresenting: isPresenting.value }
+  })
+  window.dispatchEvent(event)
+}
 
 const currentStep = computed(() => presentationSteps[currentStepIndex.value])
-
-const startPresentation = async () => {
-  isPresenting.value = true
-  isPaused.value = false
-  currentStepIndex.value = 0
-  isAutoDriving.value = false
-  
-  await router.push(presentationSteps[0].route)
-  startStepTimer()
-}
-
-const startStepTimer = () => {
-  if (!isPresenting.value || isPaused.value) return
-  
-  const step = presentationSteps[currentStepIndex.value]
-  remainingTime.value = step.duration
-  progress.value = 0
-  startTime = Date.now()
-  
-  if (stepTimer) {
-    clearTimeout(stepTimer)
-  }
-  
-  stepTimer = window.setTimeout(() => {
-    advanceStep()
-  }, remainingTime.value)
-  
-  if (countdownTimer) {
-    clearInterval(countdownTimer)
-  }
-  
-  countdownTimer = window.setInterval(() => {
-    if (!isPaused.value && isPresenting.value) {
-      const elapsed = Date.now() - startTime
-      remainingTime.value = Math.max(0, step.duration - elapsed)
-      progress.value = (elapsed / step.duration) * 100
-    }
-  }, 100)
-}
-
-const advanceStep = () => {
-  if (!isPresenting.value) return
-  
-  currentStepIndex.value++
-  
-  if (currentStepIndex.value >= presentationSteps.length) {
-    stopPresentation()
-    return
-  }
-  
-  router.push(presentationSteps[currentStepIndex.value].route)
-  startStepTimer()
-}
-
-const togglePause = () => {
-  if (!isPresenting.value) return
-  
-  isPaused.value = !isPaused.value
-  
-  if (isPaused.value) {
-    if (stepTimer) {
-      clearTimeout(stepTimer)
-      stepTimer = null
-    }
-    if (countdownTimer) {
-      clearInterval(countdownTimer)
-      countdownTimer = null
-    }
-  } else {
-    startTime = Date.now() - (currentStep.value.duration - remainingTime.value)
-    stepTimer = window.setTimeout(() => {
-      advanceStep()
-    }, remainingTime.value)
-    
-    countdownTimer = window.setInterval(() => {
-      if (!isPaused.value && isPresenting.value) {
-        const elapsed = Date.now() - startTime
-        remainingTime.value = Math.max(0, currentStep.value.duration - elapsed)
-        progress.value = (elapsed / currentStep.value.duration) * 100
-      }
-    }, 100)
-  }
-}
-
-const stopPresentation = () => {
-  isPresenting.value = false
-  isPaused.value = false
-  isAutoDriving.value = false
-  
-  if (stepTimer) {
-    clearTimeout(stepTimer)
-    stepTimer = null
-  }
-  if (countdownTimer) {
-    clearInterval(countdownTimer)
-    countdownTimer = null
-  }
-  
-  router.push('/')
-}
-
-const restartPresentation = () => {
-  stopPresentation()
-  setTimeout(() => {
-    startPresentation()
-  }, 500)
-}
-
-const goToStep = async (index: number) => {
-  if (index < 0 || index >= presentationSteps.length) return
-  
-  currentStepIndex.value = index
-  await router.push(presentationSteps[index].route)
-  
-  if (isPresenting.value && !isPaused.value) {
-    startStepTimer()
-  }
-}
-
-const formatTime = (ms: number) => {
-  const seconds = Math.ceil(ms / 1000)
-  const mins = Math.floor(seconds / 60)
-  const secs = seconds % 60
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
-}
 
 const totalDuration = presentationSteps.reduce((acc, step) => acc + step.duration, 0)
 
@@ -209,11 +104,145 @@ const overallProgress = computed(() => {
   return ((elapsedTime + currentStepTime) / totalDuration) * 100
 })
 
+const formatTime = (ms: number) => {
+  const seconds = Math.ceil(ms / 1000)
+  const mins = Math.floor(seconds / 60)
+  const secs = seconds % 60
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+}
+
 const setAutoDriving = (value: boolean) => {
   isAutoDriving.value = value
 }
 
 export function usePresentationMode() {
+  const router = useRouter()
+
+  const startStepTimer = () => {
+    if (!isPresenting.value || isPaused.value) return
+    
+    const step = presentationSteps[currentStepIndex.value]
+    remainingTime.value = step.duration
+    progress.value = 0
+    startTime = Date.now()
+    
+    if (stepTimer) {
+      clearTimeout(stepTimer)
+    }
+    
+    stepTimer = window.setTimeout(() => {
+      advanceStep()
+    }, remainingTime.value)
+    
+    if (countdownTimer) {
+      clearInterval(countdownTimer)
+    }
+    
+    countdownTimer = window.setInterval(() => {
+      if (!isPaused.value && isPresenting.value) {
+        const elapsed = Date.now() - startTime
+        remainingTime.value = Math.max(0, step.duration - elapsed)
+        progress.value = (elapsed / step.duration) * 100
+      }
+    }, 100)
+  }
+
+  const advanceStep = () => {
+    if (!isPresenting.value) return
+    
+    currentStepIndex.value++
+    
+    if (currentStepIndex.value >= presentationSteps.length) {
+      stopPresentation()
+      return
+    }
+    
+    const nextStep = presentationSteps[currentStepIndex.value]
+    router.push(nextStep.route)
+    emitStepChange(nextStep, currentStepIndex.value)
+    startStepTimer()
+  }
+
+  const startPresentation = async () => {
+    isPresenting.value = true
+    isPaused.value = false
+    currentStepIndex.value = 0
+    isAutoDriving.value = false
+    isGeneratingMusic.value = false
+    
+    await router.push(presentationSteps[0].route)
+    emitPresentationStart()
+    emitStepChange(presentationSteps[0], 0)
+    startStepTimer()
+  }
+
+  const togglePause = () => {
+    if (!isPresenting.value) return
+    
+    isPaused.value = !isPaused.value
+    
+    if (isPaused.value) {
+      if (stepTimer) {
+        clearTimeout(stepTimer)
+        stepTimer = null
+      }
+      if (countdownTimer) {
+        clearInterval(countdownTimer)
+        countdownTimer = null
+      }
+    } else {
+      startTime = Date.now() - (currentStep.value.duration - remainingTime.value)
+      stepTimer = window.setTimeout(() => {
+        advanceStep()
+      }, remainingTime.value)
+      
+      countdownTimer = window.setInterval(() => {
+        if (!isPaused.value && isPresenting.value) {
+          const elapsed = Date.now() - startTime
+          remainingTime.value = Math.max(0, currentStep.value.duration - elapsed)
+          progress.value = (elapsed / currentStep.value.duration) * 100
+        }
+      }, 100)
+    }
+  }
+
+  const stopPresentation = () => {
+    isPresenting.value = false
+    isPaused.value = false
+    isAutoDriving.value = false
+    isGeneratingMusic.value = false
+    
+    if (stepTimer) {
+      clearTimeout(stepTimer)
+      stepTimer = null
+    }
+    if (countdownTimer) {
+      clearInterval(countdownTimer)
+      countdownTimer = null
+    }
+    
+    emitPresentationStop()
+    router.push('/')
+  }
+
+  const restartPresentation = () => {
+    stopPresentation()
+    setTimeout(() => {
+      startPresentation()
+    }, 500)
+  }
+
+  const goToStep = async (index: number) => {
+    if (index < 0 || index >= presentationSteps.length) return
+    
+    currentStepIndex.value = index
+    await router.push(presentationSteps[index].route)
+    
+    if (isPresenting.value && !isPaused.value) {
+      startStepTimer()
+    }
+  }
+
   return {
     isPresenting,
     isPaused,
@@ -225,6 +254,7 @@ export function usePresentationMode() {
     totalDuration,
     presentationSteps,
     isAutoDriving,
+    isGeneratingMusic,
     startPresentation,
     togglePause,
     stopPresentation,

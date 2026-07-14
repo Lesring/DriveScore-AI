@@ -62,8 +62,8 @@ let roadEventTimer: number | null = null
 
 const handleAutoStart = () => {
   if (isPresenting.value && !isDriving.value) {
-    autoStartTimer = window.setTimeout(() => {
-      startDriving()
+    autoStartTimer = window.setTimeout(async () => {
+      await startDriving()
       setAutoDriving(true)
       
       roadEventTimer = window.setTimeout(() => {
@@ -72,7 +72,7 @@ const handleAutoStart = () => {
           roadEventTriggered = true
         }
       }, 8000)
-    }, 2000)
+    }, 1000)
   }
 }
 
@@ -198,7 +198,7 @@ onUnmounted(() => {
             <p class="text-secondary-theme mb-8">Experience AI-powered music adaptation based on your driving behavior.</p>
             
             <button 
-              @click="startDriving"
+              @click="() => startDriving()"
               class="glass-button text-xl px-12 py-4"
             >
               <span class="flex items-center gap-3">
@@ -364,7 +364,7 @@ onUnmounted(() => {
                   
                   <div class="space-y-2 text-sm">
                     <div class="flex items-center gap-2">
-                      <div class="w-2 h-2 rounded-full" :class="session.aiStatus === 'loading' ? 'bg-yellow-400 animate-pulse' : 'bg-blue-400 animate-pulse'"></div>
+                      <div class="w-2 h-2 rounded-full" :class="session.aiStatus === 'loading' ? 'bg-yellow-400 animate-pulse' : 'bg-primary animate-pulse'"></div>
                       <span class="text-primary-theme">{{ session.aiStatus === 'loading' ? 'Re-thinking...' : 'Thinking...' }}</span>
                     </div>
                     <div class="flex justify-between">

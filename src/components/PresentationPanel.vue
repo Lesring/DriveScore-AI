@@ -63,7 +63,7 @@ watch([isPresenting, currentStepIndex], () => {
         v-if="isPresenting"
         class="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50"
       >
-        <div class="glass-card p-4 px-6 backdrop-blur-xl border-glass-border shadow-2xl max-w-4xl">
+        <div class="glass-card p-4 px-6 backdrop-blur-xl border-glass-border shadow-2xl max-w-5xl">
           <div class="flex flex-col gap-4">
             <div 
               v-if="currentStep?.caption" 
@@ -74,7 +74,7 @@ watch([isPresenting, currentStepIndex], () => {
             
             <div class="flex items-center gap-6">
               <div class="flex items-center gap-2">
-                <Presentation class="w-5 h-5 text-purple-400" />
+                <Presentation class="w-5 h-5 text-primary" />
                 <span class="text-primary-theme font-semibold">Presentation Mode</span>
               </div>
               
@@ -97,7 +97,7 @@ watch([isPresenting, currentStepIndex], () => {
               <div class="w-48">
                 <div class="h-1.5 bg-glass-border rounded-full overflow-hidden">
                   <div 
-                    class="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all duration-300"
+                    class="h-full bg-gradient-to-r from-primary to-secondary rounded-full transition-all duration-300"
                     :style="{ width: `${progress}%` }"
                   ></div>
                 </div>

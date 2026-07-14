@@ -12,13 +12,13 @@ export const stateConfigs: Record<DrivingState, {
   color: string
 }> = {
   parking: { energy: 10, tempo: 0, style: 'Silent', color: '#9a8668' },
-  city: { energy: 35, tempo: 85, style: 'Urban Chill', color: '#b8a687' },
-  accelerating: { energy: 70, tempo: 120, style: 'Building Energy', color: '#c9a962' },
-  highway: { energy: 85, tempo: 130, style: 'Cruise Electronic', color: '#dcc88a' },
-  overtaking: { energy: 95, tempo: 150, style: 'Intense Beat', color: '#f5efe6' },
-  cruise: { energy: 75, tempo: 125, style: 'Smooth Groove', color: '#e8dcc4' },
-  decelerating: { energy: 40, tempo: 90, style: 'Cooling Down', color: '#d4c7b0' },
-  arrived: { energy: 20, tempo: 60, style: 'Arrival Theme', color: '#c9b896' }
+  city: { energy: 35, tempo: 85, style: 'Calm', color: '#b8a687' },
+  accelerating: { energy: 70, tempo: 120, style: 'Build', color: '#c9a962' },
+  highway: { energy: 85, tempo: 130, style: 'Cruise', color: '#dcc88a' },
+  overtaking: { energy: 95, tempo: 150, style: 'Peak', color: '#f5efe6' },
+  cruise: { energy: 75, tempo: 125, style: 'Cruise', color: '#e8dcc4' },
+  decelerating: { energy: 40, tempo: 90, style: 'Ending', color: '#d4c7b0' },
+  arrived: { energy: 20, tempo: 60, style: 'Ending', color: '#c9b896' }
 }
 
 export const roadTypes: JourneyStep['type'][] = ['city', 'elevated', 'highway', 'urban', 'end']
